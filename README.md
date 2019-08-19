@@ -1,7 +1,11 @@
 Hivemind
 ========
 
+> Warning: This package is _brand_ new and I'm going through some of the initial growing pains. Hoping to have it more sustainable in the next couple of weeks. If you want to adventure with this toolkit, expect conflicts in the near future.
+
 A python implementation of a task managment pipeline for subscription based workers. 
+
+It boils down to a micro service platform for python lovers.
 
 The Basics
 ----------
@@ -26,7 +30,7 @@ There are three layers within `hivemind`.
 But before we get into explaining how they all connect, let's start with a quick example.
 
 ## Let's Play!
-Let's create a very basic two node communication. One with a `\_Service`, the other with a `\_Subscription` to that service.
+Let's create a very basic two node communication. One with a `_Service`, the other with a `_Subscription` to that service.
 
 With hivemind installed and on your local PYTHONPATH (TODO: pip install), we create the following three files:
 
