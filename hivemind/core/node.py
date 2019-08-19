@@ -82,6 +82,12 @@ class _Node(_RobXObject):
         return self._port
 
 
+    @classmethod
+    def exec_(cls, name=None):
+        instance = cls(name)
+        instance.run()
+        return instance
+
     # -- Overloaded from _RobXObject
 
     def run(self):
