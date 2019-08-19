@@ -3,6 +3,7 @@ import logging
 import threading
 
 from .base import _RobXObject
+from .root import RootController
 
 class _Service(_RobXObject):
     """
@@ -32,6 +33,14 @@ class _Service(_RobXObject):
     @property
     def function(self):
         return self._function
+
+
+    def send(self, payload):
+        """
+        When the service wants to transmit data to any subscribers,
+        we use this to pass along the information
+        """
+        RootController.send_to_controller(self, payload)
 
 
     def abort(self):

@@ -1,4 +1,5 @@
 
+import uuid
 import logging
 import traceback
 
@@ -7,6 +8,7 @@ from http.server import ThreadingHTTPServer
 from robx.core.base import _RobXObject, _HandlerBase
 from robx.core.root import RootController
 from robx.core.service import _Service
+from robx.core.subscription import _Subscription
 
 
 class NodeSubscriptionHandler(_HandlerBase):
@@ -19,7 +21,7 @@ class NodeSubscriptionHandler(_HandlerBase):
         """
         The POST operation for a node subscription
         """
-        logging.info(f'POST: {self.path}')
+        self._set_headers()
 
         if not hasattr(self, 'endpoints'):
             return None # Nothing to do...
@@ -28,6 +30,10 @@ class NodeSubscriptionHandler(_HandlerBase):
             # This is an errored response from our root. We need
             # to abort now
             return None
+
+        # TODO!
+        # if self.path == '/shutdown':
+        #     self._node.shutdown()
 
         for endpoint, subscription in self.endpoints.items():
             if self.path == endpoint:
@@ -44,14 +50,23 @@ class _Node(_RobXObject):
     after registering with the RootController anything it hosts.
     """
 
-    def __init__(self, name):
+    def __init__(self, name=None):
         _RobXObject.__init__(self)
 
-        self._name = name
-        self._services = []
-        self._subscriptions = []
-        self._threads = []
+        # The name of this node
+        self._name = name or uuid.uuid4()
+
+        # The port assigned by the root node
+        self._port = None
+
+        # Activation achieved through the master node
         self._enabled = False
+
+        # Known _Service objects attached to this node
+        self._services = []
+
+        # Known _Subscription objects attached to this node
+        self._subscriptions = []
 
         self.services()
         self.subscriptions()
@@ -60,6 +75,11 @@ class _Node(_RobXObject):
     @property
     def name(self):
         return self._name
+
+
+    @property
+    def port(self):
+        return self._port
 
 
     # -- Overloaded from _RobXObject
@@ -99,7 +119,9 @@ class _Node(_RobXObject):
                 # For each subscription, we add their endpoints to
                 # our soon-to-be server
                 #
-                self._handler_class.endpoints[subscription.path] = subscription
+                self._handler_class.endpoints[
+                    subscription.endpoint
+                ] = subscription
                 RootController.register_subscription(subscription)
 
             RootController.enable_node(self)
@@ -114,7 +136,8 @@ class _Node(_RobXObject):
 
         except Exception as e:
             logging.critical("Issue with executing node.")
-            list(map(logging.critical, traceback.format_exc().split('\n')))
+            list(map(logging.critical,
+                     traceback.format_exc().split('\n')))
             self.shutdown()
             return
 
@@ -137,19 +160,23 @@ class _Node(_RobXObject):
         initialize the thread that the service "lives" on
         and begin it's functionality.
         """
-        service = _Service(self, service_name, function)
+        service = _Service(
+            self, service_name, function
+        )
         with self.lock:
             self._services.append(service)
             service.run() # _RobXObject
         return service
 
 
-    def add_subscription(self, subscription_filter, function):
+    def add_subscription(self, subscription_filter, function, name=None):
         """
         Generates a _Subscription with the given name. This becomes
         an enpoint on our local server 
         """
-        subscription = _Subscription(self, subscription_filter, function)
+        subscription = _Subscription(
+            self, subscription_filter, function, name=name
+        )
         with self.lock:
             self._subscriptions.append(subscription)
         return subscription
@@ -192,6 +219,10 @@ class _Node(_RobXObject):
         Here's where the main node thread starts up and runs whatever
         functionality is required.
         """
+
+        logging.debug(f"Node subscription set: {self._port}")
         server_adress = ('', self._port)
-        httpd = ThreadingHTTPServer(server_adress, NodeSubscriptionHandler)
+        httpd = ThreadingHTTPServer(
+            server_adress, self._handler_class
+        )
         httpd.serve_forever()

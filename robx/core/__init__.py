@@ -16,6 +16,7 @@ as well as control the larger dataset that all nodes can access.
 import os
 import sys
 import time
+import logging
 import threading
 
 if __name__ == '__main__':
@@ -28,20 +29,24 @@ from robx.core.root import RootController
 from robx.core.node import _Node
 
 
-def proc_1():
+def proc_1(num=0):
 
     class SendTask(_Node):
         """ A simple service that ships out a message every few seconds """
         def services(self):
-            self._my_service = self.add_service('my-service', self._send_message)
+            self._my_service = self.add_service(
+                'my-service',
+                self._send_message
+                # priority=0 # TODO
+            )
 
         def _send_message(self):
-            print ("foo")
-            # self._my_service.send('foo')
-            time.sleep(5)
+            self._my_service.send('A Message For More!')
+            # The service shouldn't spam. Only when data is required
+            time.sleep(1)
             return 0
 
-    a_task = SendTask('message_task')
+    a_task = SendTask(f'message_task_{num}')
     a_task.run()
 
 def proc_2():
@@ -55,9 +60,7 @@ def proc_2():
         def _receive_message(self, payload: str):
             if not isinstance(payload, str):
                 return
-
-            print ("MESSAGE RECEIVED!")
-            print (payload)
+            logging.info(payload)
 
     this_task = ReceiveTask('listen_task')
     this_task.run()
@@ -69,5 +72,7 @@ if __name__ == '__main__':
         proc_1()
     elif sys.argv[-1] == '2':
         proc_2()
+    elif sys.argv[-1] == '3':
+        proc_1(1)
     else:
         RootController.exec_()

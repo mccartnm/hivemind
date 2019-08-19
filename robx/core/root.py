@@ -2,8 +2,16 @@
 
 """
 
+import queue
 import logging
+import fnmatch
 import requests
+import threading
+
+# -- For Queue Prio
+from dataclasses import dataclass, field
+from typing import Any
+
 from http.server import ThreadingHTTPServer
 
 from robx.core.base import _RobXObject, _HandlerBase
@@ -37,7 +45,7 @@ class RootServiceHandler(_HandlerBase):
         elif self.path == '/core/heartbeat':
             self.write_to_response({'result' : True})
 
-        else:
+        elif self.path.startswith('/service/'):
             passback = self.controller._delegate(self.path, self.data)
             self.write_to_response(passback)
         # return '<none>'
@@ -45,6 +53,18 @@ class RootServiceHandler(_HandlerBase):
     def do_GET(self):
         self._set_headers()
         self.write_to_response({'result' : True})
+
+
+@dataclass(order=True)
+class PrioritizedDispatch:
+    """
+    Item used to identify the prio of arbitrary payload
+    data from our services. Ripped from py docs.
+    """
+    priority: int
+    name: Any=field(compare=False)
+    node: Any=field(compare=False)
+    payload: Any=field(compare=False)
 
 
 class RootController(_RobXObject):
@@ -82,6 +102,30 @@ class RootController(_RobXObject):
             return hash(self._name)
 
 
+    class SubscriptionInfo(object):
+        """
+        Subscription data held by the RootController
+        """
+        def __init__(self, endpoint, port, proxy):
+            self._endpoint = endpoint
+            self._port = port
+            self._proxy = proxy
+
+        @property
+        def port(self):
+            return self._port
+
+
+        @property
+        def endpoint(self):
+            return self._endpoint
+
+
+        @property
+        def proxy(self):
+            return self._proxy
+        
+
     def __init__(self, **kwargs):
         _RobXObject.__init__(self)
 
@@ -95,6 +139,43 @@ class RootController(_RobXObject):
 
         # Requested subscriptions
         self._subscriptions = {}
+
+        # How we know to shut down our dispatch threads
+        self._abort = False
+
+        #
+        # To avoid bogging down slow processing subscriptions,
+        # we use a set of response threads to make sure things
+        # stay nice and light as well as handle instances of
+        # bugged nodes without halting the rest of the execution
+        # state.
+        #
+        self._response_threads = []
+        self._response_lock = threading.RLock()
+        self._response_condition = threading.Condition(self._response_lock)
+        self._response_queue = queue.PriorityQueue()
+
+
+    @classmethod
+    def send_to_controller(cls, service, payload):
+        """
+        Utility for shipping messages to our controller which
+        will then route to the various subscribers (alternate
+        thread)
+        """
+        json_data = {
+            'service' : service.name,
+            'node' : service.node.name,
+            'payload' : payload,
+            'priority' : 1 # TODO
+        }
+
+        result = requests.post(
+            f'http://127.0.0.1:{cls.default_port}/service/{service.name}',
+            json=json_data
+        )
+        result.raise_for_status()
+        return 0 # We'll need some kind of passback
 
 
     @classmethod
@@ -164,9 +245,10 @@ class RootController(_RobXObject):
         info.
         """
         return cls._register_post('subscription', {
-            'node' : service.node.name,
-            'name' : subscription.name,
-            'endpoint' : service.endpoint
+            'node' : subscription.node.name,
+            'filter' : subscription.filter,
+            'endpoint' : subscription.endpoint,
+            'port' : subscription.node.port
         })
 
     @staticmethod
@@ -191,6 +273,18 @@ class RootController(_RobXObject):
             self._handler_class = RootServiceHandler
             self._handler_class.controller = self # Reverse pointer
 
+            #
+            # Before running our server, let's start our queue threads
+            # that deal with linking back to other services.
+            #
+            for i in range(2):
+                res_thread = threading.Thread(
+                    target=self._dispatch,
+                    name=f'response_thread_{i}'
+                )
+                res_thread.start()
+                self._response_threads.append(res_thread)
+
             self._server = ThreadingHTTPServer(
                 ('', self.default_port), self._handler_class
             )
@@ -199,9 +293,14 @@ class RootController(_RobXObject):
 
             # Just keep serving
             self._server.serve_forever()
+            return
 
         except KeyboardInterrupt as err:
-            self._server.shutdown()
+            self._shutdown()
+            return
+
+        except Exception as e:
+            self._shutdown()
             return
 
     # -- Private Interface (reserved for running instance)
@@ -274,8 +373,13 @@ class RootController(_RobXObject):
             if proxy in self._services:
                 self._services.pop(proxy)
 
-            if proxy in self._subscriptions:
-                self._services.pop(proxy)
+            for filter_, subinfo in self._subscriptions.items():
+                to_rem = []
+                for d in subinfo:
+                    if d.proxy == proxy:
+                        to_rem.append(d)
+                for d in to_rem:
+                    subinfo.remove(d)
 
 
     def _register_service(self, payload):
@@ -313,19 +417,103 @@ class RootController(_RobXObject):
             isinstance(payload, dict), \
             'Subscription Registration payload must be a dict'
         assert \
-            all(k in payload for k in ('node', 'filter')), \
-            'Subscription Registration payload missing "node" or "filter"'
+            all(k in payload for k in ('node', 'filter', 'endpoint', 'port')), \
+            'Subscription Registration payload missing "node", ' \
+            ' "filter", "port" or "endpoint"'
 
         proxy = self.NodeProxy(payload['node'])
 
+        logging.info(
+            f"Register Subscription: {payload['node']} to {payload['filter']}"
+        )
+
         with self.lock:
             assert proxy in self._nodes, f'Node {payload["node"]} not found'
-            known_subscriptions = self._subscriptions.setdefault(proxy, {})
-            known_subscriptions.setdefault(payload['name'], []).append(payload)
+            known_subscriptions = self._subscriptions.setdefault(
+                payload['filter'], []
+            )
+            known_subscriptions.append(
+                self.SubscriptionInfo(
+                    payload['endpoint'],
+                    payload['port'],
+                    proxy
+                )
+            )
+
+        return 0
 
 
     def _delegate(self, path, payload):
         """
         Based on the path, we have to handle our work accordingly.
         """
-        pass
+        service_name = path.split('/')[-1]
+        logging.debug(f"Message from: {service_name}")
+
+        self._response_queue.put(PrioritizedDispatch(
+            payload.get('priority', 1),  # Prio (lower is higher prio!)
+            service_name,                # Name
+            payload.get('node', None),   # Node
+            payload.get('payload', None) # Payload
+        ))
+
+        with self._response_condition:
+            self._response_condition.notify()
+
+        return { 'result' : True } # For now
+
+
+    def _shutdown(self):
+        self._server.shutdown()
+        with self._response_condition:
+            self._abort = True
+            self._response_condition.notify_all()
+
+
+    def _dispatch(self):
+        """
+        Based on what's available from the queue, ship out messages
+        to any listening subsribers 
+        """
+        while True:
+
+            with self._response_condition:
+                while (not self._abort) and self._response_queue.empty():
+                    self._response_condition.wait()
+
+            dispatch_object = None
+            with self._response_lock:
+                if self._abort:
+                    break
+
+                try:
+                    dispatch_object = self._response_queue.get_nowait()
+                except queue.Empty:
+                    continue # We must have missed it
+
+            if not dispatch_object:
+                continue # How??
+
+            # We have a dispatch - locate any matching subscriptions
+            for filter_ in self._subscriptions:
+                if fnmatch.fnmatch(dispatch_object.name, filter_):
+
+                    #
+                    # We have a match - now it's time to ship this
+                    # payload to the subscriptions undernearth
+                    #
+                    for si in self._subscriptions[filter_]:
+                        url = f'http://127.0.0.1:{si.port}{si.endpoint}'
+                        self._send_to_subscription(
+                            url, dispatch_object.payload
+                        )
+
+
+    def _send_to_subscription(self, url, payload):
+        print (url)
+        print (payload)
+        result = requests.post(url, json=payload)
+        try:
+            result.raise_for_status()
+        except Exception as e:
+            print ("Sending to sub failed!") # FIXME
