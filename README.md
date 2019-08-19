@@ -1,5 +1,5 @@
-ROBX
-====
+Hivemind
+========
 
 A python implementation of a task managment pipeline for subscription based workers. 
 
@@ -7,7 +7,7 @@ The Basics
 ----------
 The paradigm for service/subscription processes is not new. I just wanted to create a tiny yet mighty package that could handle some of the cruft when prototyping your next network.
 
-There are three layers within `robx`.
+There are three layers within `hivemind`.
 
 ```
             [ Data Layer ] <-- Eventually
@@ -28,13 +28,13 @@ But before we get into explaining how they all connect, let's start with a quick
 ## Let's Play!
 Let's create a very basic two node communication. One with a `\_Service`, the other with a `\_Subscription` to that service.
 
-With robx installed and on your local PYTHONPATH (TODO: pip install), we create the following three files:
+With hivemind installed and on your local PYTHONPATH (TODO: pip install), we create the following three files:
 
 ```py
 # root.py
 
-# What most robx starter kits will use
-from robx import RootController
+# What most hivemind starter kits will use
+from hivemind import RootController
 if __name__ == '__main__':
     RootController.exec_()
 ```
@@ -42,7 +42,7 @@ if __name__ == '__main__':
 ```py
 # service_node.py
 
-from robx import _Node
+from hivemind import _Node
 class SendTask(_Node):
     """ A simple service that ships out a message every few seconds """
     def services(self):

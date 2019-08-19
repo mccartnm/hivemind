@@ -5,10 +5,10 @@ import traceback
 
 from http.server import ThreadingHTTPServer
 
-from robx.core.base import _RobXObject, _HandlerBase
-from robx.core.root import RootController
-from robx.core.service import _Service
-from robx.core.subscription import _Subscription
+from .base import _RobXObject, _HandlerBase
+from .root import RootController
+from .service import _Service
+from .subscription import _Subscription
 
 
 class NodeSubscriptionHandler(_HandlerBase):

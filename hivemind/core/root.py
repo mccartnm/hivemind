@@ -14,7 +14,7 @@ from typing import Any
 
 from http.server import ThreadingHTTPServer
 
-from robx.core.base import _RobXObject, _HandlerBase
+from hivemind.core.base import _RobXObject, _HandlerBase
 
 
 class RootServiceHandler(_HandlerBase):
@@ -510,8 +510,6 @@ class RootController(_RobXObject):
 
 
     def _send_to_subscription(self, url, payload):
-        print (url)
-        print (payload)
         result = requests.post(url, json=payload)
         try:
             result.raise_for_status()
