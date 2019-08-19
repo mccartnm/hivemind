@@ -22,17 +22,38 @@ class _Service(_RobXObject):
 
     @property
     def node(self):
+        """ The _Node instance that onws this Service """
         return self._node
 
 
     @property
     def name(self):
+        """ The name of the service """
         return self._name
 
 
     @property
     def function(self):
+        """ The executable that we run with our service """
         return self._function
+
+
+    def sleep_for(self, timeout):
+        """
+        Conditionaly sleep the service thread. Will eject if
+        abort is called.
+
+        :param timeout: The sleep time (float in seconds
+        or part thereof)
+        :return: Boolean - False if abort() was called while waiting
+        """
+        with self._condition:
+             self._condition.wait(timeout)
+
+        ab = False
+        with self.lock:
+            ab = self._abort
+        return (not ab)
 
 
     def send(self, payload):
@@ -84,7 +105,7 @@ class _Service(_RobXObject):
 
             result = func() # Fire!
             if result > 0:
-                self.abort()
+                self.abort() # What happens here
                 break
 
 

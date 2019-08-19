@@ -43,7 +43,8 @@ def proc_1(num=0):
         def _send_message(self):
             self._my_service.send('A Message For More!')
             # The service shouldn't spam. Only when data is required
-            time.sleep(1)
+            if not self._my_service.sleep_for(5.0):
+                return 0
             return 0
 
     a_task = SendTask(f'message_task_{num}')
