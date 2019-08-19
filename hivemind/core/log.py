@@ -15,8 +15,8 @@ DATETIME_FORMAT = '%d/%m/%Y %I:%M:%S %p'
 DEFAULT_HANDLER = None
 FILE_HANDLER = None
 VERBOSE_MODE = False
-
 CURRENT_INDENT = 0
+LOGGING_STARTED = False
 
 class BetterFormater(logging.Formatter):
 
@@ -51,6 +51,11 @@ def start(verbose, output_file=None):
     global FILE_HANDLER
     global DEFAULT_FORMAT
     global VERBOSE_MODE
+    global LOGGING_STARTED
+
+    if LOGGING_STARTED:
+        return
+    LOGGING_STARTED = True
 
     VERBOSE_MODE = verbose
     level = logging.INFO if not verbose else logging.DEBUG

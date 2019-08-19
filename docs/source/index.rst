@@ -6,15 +6,25 @@
 Hivemind
 ========
 
-The python budget micro service sandbox.
+The python micro service prototyping sandbox on a budget!
+
+.. note::
+
+    Excuse the apperence while we flesh out a whole bunch of this system. If you want to get the code right away `grab it here`_
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Quick Start
+    :maxdepth: 2
+    :caption: Quick Start
 
-   basics/install
-   quickstart/root
-   basics/words
+    basics/install
+    quickstart/root
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Features
+
+    basics/model
+    basics/words
 
 
 Indices and tables
@@ -23,3 +33,7 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. links
+
+.. _grab it here: http://github.com/mccartnm/hivemind

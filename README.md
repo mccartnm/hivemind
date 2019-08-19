@@ -3,6 +3,8 @@ Hivemind
 
 > Warning: This package is _brand_ new and I'm going through some of the initial growing pains. Hoping to have it more sustainable in the next couple of weeks. If you want to adventure with this toolkit, expect conflicts in the near future.
 
+[Better, less crazy docs](https://mccartnm.github.io/hivemind-docs/index.html)
+
 A python implementation of a task managment pipeline for subscription based workers. 
 
 It boils down to a micro service platform for python lovers.

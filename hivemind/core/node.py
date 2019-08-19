@@ -5,6 +5,7 @@ import traceback
 
 from http.server import ThreadingHTTPServer
 
+from . import log
 from .base import _RobXObject, _HandlerBase
 from .root import RootController
 from .service import _Service
@@ -83,7 +84,8 @@ class _Node(_RobXObject):
 
 
     @classmethod
-    def exec_(cls, name=None):
+    def exec_(cls, name=None, logging=None):
+        log.start(logging is not None)
         instance = cls(name)
         instance.run()
         return instance

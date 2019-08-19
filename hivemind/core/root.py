@@ -14,7 +14,8 @@ from typing import Any
 
 from http.server import ThreadingHTTPServer
 
-from hivemind.core.base import _RobXObject, _HandlerBase
+from . import log
+from .base import _RobXObject, _HandlerBase
 
 
 class RootServiceHandler(_HandlerBase):
@@ -252,11 +253,12 @@ class RootController(_RobXObject):
         })
 
     @staticmethod
-    def exec_():
+    def exec_(logging=None):
         """
         Generic call used by most entry scripts to start the root without
         having to create a custom local instance
         """
+        log.start(logging is not None)
         controller = RootController()
         controller.run()
         return controller
