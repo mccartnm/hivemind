@@ -43,7 +43,7 @@ From there, your prompt should enter the environment and alert you with a ``(hm)
     (hm) ~$> ...
 
 
-To leave the environment, as any time, simply enter:
+To leave the environment, at any time, simply enter:
 
 .. code-block:: shell
 

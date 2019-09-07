@@ -118,3 +118,11 @@ Once done, we are ready to fire up this node and complete the cycle.
     ~$> python test_subscription.py
 
 If all goes well you should see the subscription printing out ``"A TEST MESSAGE"`` every 5 seconds.
+
+Simplicity
+==========
+
+Just like that, using less than 30 lines of actual code, we are able to create a stable, stateless network that can interpret and process data without needing to know anything about one another.
+
+Another benefit is you can take down either of the nodes and stand them back up without any real repercussions. Taking down the service just means the subscription won't receive data but it's no bother to it. The Root controller will register/de-register nodes as they come and go for development and maintenance purposes.
+
