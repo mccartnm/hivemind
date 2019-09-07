@@ -162,14 +162,14 @@ class _Node(_RobXObject):
 
     # -- Public Methods
 
-    def add_service(self, service_name, function):
+    def add_service(self, name, function):
         """
         Generates a _Service with the given name. This will
         initialize the thread that the service "lives" on
         and begin it's functionality.
         """
         service = _Service(
-            self, service_name, function
+            self, name, function
         )
         with self.lock:
             self._services.append(service)

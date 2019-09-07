@@ -5,8 +5,6 @@ Primitives
 Layers
 ======
 
-The paradigm for service/subscription processes is not new. In fact, it's become quite common in utilities like RabbitMQ, ROS (Robot Operating System) and others.
-
 There are three layers within ``hivemind``.
 
 .. code-block:: none

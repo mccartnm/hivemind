@@ -58,11 +58,11 @@ With our root up and running, let's build a service to ship some data every few 
             to know when we terminate as the _Node and _Service will
             take care of that for us.
             """
-            self._my_service.send('a test message')
+            self._ping_service.send('a test message')
 
             # This is the best way to sleep a service as it can auto
             # return if the service is aborted or the node shut down
-            self._my_service.sleep_for(5.0)
+            self._ping_service.sleep_for(5.0)
 
             return 0
 

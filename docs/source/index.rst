@@ -1,8 +1,3 @@
-.. hivemind documentation master file, created by
-   sphinx-quickstart on Mon Aug 19 12:29:25 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Hivemind
 ========
 
@@ -10,7 +5,16 @@ The python micro service prototyping sandbox on a budget!
 
 .. note::
 
-    Excuse the apperence while we flesh out a whole bunch of this system. If you want to get the code right away `grab it here`_
+    Excuse the appearance while we flesh out a whole bunch of this system. If you want to get the code right away `grab it here`_
+
+The paradigm for service/subscription processes is not new. In fact, it's become quite common in utilities like RabbitMQ, ROS (Robot Operating System) and others.
+
+``hivemind`` seeks to add a few features to that paradigm.
+
+1. Insanely fast development throughput with little to know need to understand the "under-the-hood" components
+2. Lean-and-mean data layer(s) to help organize your data without any concrete overhead
+3. **(Most importantly)** - we want to make it nearly impossible to take down.
+
 
 .. toctree::
     :maxdepth: 2
@@ -23,8 +27,8 @@ The python micro service prototyping sandbox on a budget!
     :maxdepth: 2
     :caption: Features
 
-    basics/model
     basics/words
+    basics/model
 
 
 Indices and tables
