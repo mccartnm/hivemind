@@ -4,8 +4,9 @@ import sys
 # Get to the right path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import unittest
+from hivemind import RootController, _Node
 
+import unittest
 
 class HiveMindTests(unittest.TestCase):
     """
