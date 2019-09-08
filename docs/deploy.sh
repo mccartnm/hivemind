@@ -8,7 +8,7 @@ setup_git() {
 }
 
 commit_website_files() {
-  pip install sphinx
+  pip install -r requirements/docs.txt
   cd ../../
   git clone --branch=master https://github.com/mccartnm/hivemind-docs.git mccartnm/hivemind-docs
   cd mccartnm/hivemind/docs
