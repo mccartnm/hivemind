@@ -17,8 +17,8 @@ install:
 script:
   - coverage run tests/test_hivemind.py
 
-after_sucess:
-  - codecov 
+after_success:
+  - codecov
 
 stages:
   - test
