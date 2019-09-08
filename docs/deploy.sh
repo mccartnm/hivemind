@@ -12,7 +12,8 @@ commit_website_files() {
   cd ../../
   git clone --branch=master https://github.com/mccartnm/hivemind-docs.git mccartnm/hivemind-docs
   cd mccartnm/hivemind/docs
-  make github
+  make html 
+  cp -af build/html/* ../../hivemind-docs
   cd ../../hivemind-docs
   git remote rm origin
   git remote add origin https://user:${GH_TOKEN}@github.com/mccartnm/hivemind-docs.git
