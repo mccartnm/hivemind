@@ -1,0 +1,39 @@
+
+dist: xenial
+language: python
+
+branches:
+  only:
+    - master
+    - dev
+
+python:
+  - '3.6'
+  - '3.7'
+
+
+install:
+  - pip install codecov
+
+script:
+  - coverage run tests/test_hivemind.py
+
+after_sucess:
+  - codecov 
+
+stages:
+  - test
+  - name: deploy_docs
+    if: branch = master
+
+jobs:
+  include:
+    - stage: test
+    - stage: deploy_docs
+      name: "Deploy Docs"
+      script: skip
+      deploy:
+        - provider: script
+          script: bash docs/deploy.sh
+          on:
+            branch: master
