@@ -1,38 +1,32 @@
-
 dist: xenial
 language: python
-
 branches:
   only:
-    - master
-    - dev
-
+  - master
+  - dev
 python:
-  - '3.7'
-
-
+- '3.7'
 install:
-  - pip install codecov
-
+- pip install codecov
 script:
-  - coverage run tests/test_hivemind.py
-
+- coverage run tests/test_hivemind.py
 after_success:
-  - codecov
-
+- codecov
 stages:
-  - test
-  - name: deploy_docs
-    if: branch = master
-
+- test
+- name: deploy_docs
+  if: branch = master
 jobs:
   include:
-    - stage: test
-    - stage: deploy_docs
-      name: "Deploy Docs"
-      script: skip
-      deploy:
-        - provider: script
-          script: bash docs/deploy.sh
-          on:
-            branch: master
+  - stage: test
+  - stage: deploy_docs
+    name: Deploy Docs
+    script: skip
+    deploy:
+    - provider: script
+      script: bash docs/deploy.sh
+      on:
+        branch: master
+env:
+  global:
+    secure: tO3QtUw9wWywjeSjLzrvngoSeF9i1OIKKk1/y9r9Ce4aCmUlnsH6m4UoPlugc/Ja4R9gG9AysdJkxB5Fx0FBqR7SWU+gI07rExHOB02Z6AyPSxR4zv1Ykgurnf/cTfWnlwcuaxFUkGAVp5fmbthR01dYetdHlLQ+dYeDAqs0i48co0/7uIoMgS4A02BLVwyFsqEesQ63KcVczn+fzCYPyhgjREta/qrnJUF8uL2pTVLoeeLHCY3/tWOFm+IWAzlNSk03E/MU3XTW3dE8ONL2gtvVr81vnUj6gbkBtEE3ZNvOVvBvCeYyUDwCBczjT3CJQFNtDzfNbPH64OyBKoT6KxnaL6p1DD/pm+T6Qcw6BY0EXPWlIzVHV+AEempI8Tq0urNTSjmcXDDAMZqiC+apkwCHWnCWpyCrszkQ9Jan4bvO5g8pzBJydBPLXC86swvg0KtCjV0bkNl0Wa2XWzm7jEWan2lPyLxJxubTFzj4f/YK0v2KaREn8kt2w5F6r6+1AJoQNIbDwyHO1q/TFF62/XpLhuYY5/KvEPShxPdIaJol4Jw4eUBuzD5zi8Oa/2rYAjaHubseWb0sBE6/ehDCdDNAZWScea2veZsusDqAnbtr+SwkI62Ae8ur/r56M2dDDq6hN+caz7TunvrHV5a2bWJCfMY102LQIpomJPDcSy8=
