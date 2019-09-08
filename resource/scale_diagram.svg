@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="Scale">
+        <g id="DB_1" transform="matrix(1,0,0,1,0,129.359)">
+            <g transform="matrix(1,0,0,0.512989,-6,33.7662)">
+                <path d="M440,47.773C440,31.341 433.156,18 424.727,18L99.273,18C90.844,18 84,31.341 84,47.773L84,107.32C84,123.753 90.844,137.094 99.273,137.094L424.727,137.094C433.156,137.094 440,123.753 440,107.32L440,47.773Z" style="fill:rgb(0,144,154);fill-opacity:0.56;"/>
+            </g>
+            <g transform="matrix(1,0,0,0.512989,-6,93.86)">
+                <path d="M440,47.773C440,31.341 433.156,18 424.727,18L99.273,18C90.844,18 84,31.341 84,47.773L84,107.32C84,123.753 90.844,137.094 99.273,137.094L424.727,137.094C433.156,137.094 440,123.753 440,107.32L440,47.773Z" style="fill:rgb(0,144,154);fill-opacity:0.56;"/>
+            </g>
+            <g transform="matrix(1,0,0,0.512989,-6,153.954)">
+                <path d="M440,47.773C440,31.341 433.156,18 424.727,18L99.273,18C90.844,18 84,31.341 84,47.773L84,107.32C84,123.753 90.844,137.094 99.273,137.094L424.727,137.094C433.156,137.094 440,123.753 440,107.32L440,47.773Z" style="fill:rgb(0,144,154);fill-opacity:0.56;"/>
+            </g>
+        </g>
+        <g id="Node_1" transform="matrix(1,0,0,1,31,-243.705)">
+            <g transform="matrix(1,0,0,1,-167,-68)">
+                <rect x="205" y="354" width="92" height="92" style="fill:rgb(41,255,50);"/>
+                <path d="M298.944,447.944L203.056,447.944L203.056,352.056L298.944,352.056L298.944,447.944ZM206.944,355.944L206.944,444.056L295.056,444.056L295.056,355.944L206.944,355.944Z"/>
+            </g>
+            <g transform="matrix(4.72533,0,0,4.72533,-248.831,-1103.59)">
+                <text x="66.138px" y="308.102px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:12px;">N</text>
+            </g>
+            <g transform="matrix(1.77444,0,0,1.77444,-96.9495,43.6042)">
+                <text x="112px" y="184.295px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:14.372px;">1</text>
+            </g>
+        </g>
+        <g id="Node_11" serif:id="Node_1" transform="matrix(1,0,0,1,172,-243.705)">
+            <g transform="matrix(1,0,0,1,-167,-68)">
+                <rect x="205" y="354" width="92" height="92" style="fill:rgb(41,255,50);"/>
+                <path d="M298.944,447.944L203.056,447.944L203.056,352.056L298.944,352.056L298.944,447.944ZM206.944,355.944L206.944,444.056L295.056,444.056L295.056,355.944L206.944,355.944Z"/>
+            </g>
+            <g transform="matrix(4.72533,0,0,4.72533,-248.831,-1103.59)">
+                <text x="66.138px" y="308.102px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:12px;">N</text>
+            </g>
+            <g transform="matrix(1.77444,0,0,1.77444,-96.9495,43.6042)">
+                <text x="112px" y="184.295px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:14.372px;">1</text>
+            </g>
+        </g>
+        <g id="Node_12" serif:id="Node_1" transform="matrix(1,0,0,1,313,-243.705)">
+            <g transform="matrix(1,0,0,1,-167,-68)">
+                <rect x="205" y="354" width="92" height="92" style="fill:rgb(41,255,50);"/>
+                <path d="M298.944,447.944L203.056,447.944L203.056,352.056L298.944,352.056L298.944,447.944ZM206.944,355.944L206.944,444.056L295.056,444.056L295.056,355.944L206.944,355.944Z"/>
+            </g>
+            <g transform="matrix(4.72533,0,0,4.72533,-248.831,-1103.59)">
+                <text x="66.138px" y="308.102px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:12px;">N</text>
+            </g>
+            <g transform="matrix(1.77444,0,0,1.77444,-96.9495,43.6042)">
+                <text x="112px" y="184.295px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:14.372px;">1</text>
+            </g>
+        </g>
+        <path d="M257.533,254.804L254.467,257.196L159.467,135.491L162.533,133.098L257.533,254.804Z"/>
+        <g transform="matrix(1,0,0,1,10,0)">
+            <rect x="244.056" y="134.295" width="3.889" height="73.705"/>
+        </g>
+        <rect x="254.056" y="309" width="3.889" height="76"/>
+        <path d="M352.533,135.491L257.533,257.196L254.467,254.804L349.467,133.098L352.533,135.491Z"/>
+        <g id="Root_1" transform="matrix(1,0,0,1,0,72)">
+            <g transform="matrix(1,0,0,1,12,29)">
+                <circle cx="244" cy="155" r="69" style="fill:rgb(117,239,255);"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-16.0202,91.2502)">
+                <text x="246.801px" y="115.656px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:64px;">R</text>
+            </g>
+        </g>
+        <g id="Node_2" transform="matrix(1,0,0,1,-172,99)">
+            <g transform="matrix(1,0,0,1,177,-68)">
+                <rect x="205" y="354" width="92" height="92" style="fill:rgb(255,112,137);"/>
+            </g>
+            <g transform="matrix(4.72533,0,0,4.72533,95.1693,-1103.59)">
+                <text x="66.138px" y="308.102px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:12px;">N</text>
+            </g>
+            <g transform="matrix(1.77444,0,0,1.77444,247.05,38.9792)">
+                <text x="112px" y="184.295px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:14.372px;">2</text>
+            </g>
+        </g>
+    </g>
+</svg>

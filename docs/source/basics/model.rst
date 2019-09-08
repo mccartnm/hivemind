@@ -50,3 +50,9 @@ Network
 =======
 
 This is the grouping of all node-like objects including both controllers and working nodes. All communication, currently, uses basic TCP to work between each process.
+
+
+Resilience
+==========
+
+In almost all movies, the big bad hive mind villain is taken down by the heroes simply killing of the "brain." This is because, ultimately, that design is flawed (duh). Instead of one omnipotent centralized control, ``hivemind`` attempts to avoid that catastrophic end by simply duplicating the brain and keeping a running interface between each of them. Unless *all* the brains are dead, the system lives on.
