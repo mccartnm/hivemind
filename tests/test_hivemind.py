@@ -13,7 +13,9 @@ class HiveMindTests(unittest.TestCase):
     TODO
     """
     def test_foo(self):
-        pass
+
+        class MyNode(_Node):
+            foo = "bar"
 
 
 # ----------------------------------------------------------------------------------------------

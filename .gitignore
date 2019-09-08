@@ -2,3 +2,4 @@
 __pychache__
 docs/build
 build
+.coverage
