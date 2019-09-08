@@ -8,12 +8,12 @@ setup_git() {
 }
 
 commit_website_files() {
-  pip install --user sphinx
+  pip install sphinx
   cd ../../
-  git clone --depth=50 --branch=master https://github.com/mccartnm/hivemind-docs.git mccartnm/hivemind-docs
+  git clone --branch=master https://github.com/mccartnm/hivemind-docs.git mccartnm/hivemind-docs
   cd mccartnm/hivemind/docs
   make github
-  cd ../hivemind-docs
+  cd ../../hivemind-docs
   git remote rm origin
   git remote add origin https://user:${GH_TOKEN}@github.com/mccartnm/hivemind-docs.git
   git add -A
