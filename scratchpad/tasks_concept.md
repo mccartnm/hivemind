@@ -124,6 +124,14 @@ if __name__ == '__main__':
 
 With that running, both tasks are up and, while the cron job waits until midnight to execute, the request task will alert the control layer to add an available task at a pretty rest endpoint. Something that will also be taking a bit of work to setup.
 
+This could probably even be boiled down to a cli command
+
+```bash
+~$> hm tasks --config "./task.yaml"
+```
+
+Man wouldn't that be cool.
+
 # The Root Frontend
 
 Well, now that we've spelled out how to add request based jobs to our task nodes, we need a way of managing them and firing them off. This probably takes the form of a simple web interface via jinja or something of that sort. This is open ended and can be discuessed at length in the near future.
