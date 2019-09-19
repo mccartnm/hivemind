@@ -1,2 +1,1 @@
-# Currently we don't require anything!
-# This is more of a - in the near future - bit.
+purepy>=1.0.0

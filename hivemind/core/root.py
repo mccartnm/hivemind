@@ -15,7 +15,7 @@ from typing import Any
 from http.server import ThreadingHTTPServer
 
 from . import log
-from .base import _RobXObject, _HandlerBase
+from .base import _HivemindAbstractObject, _HandlerBase
 
 
 class RootServiceHandler(_HandlerBase):
@@ -68,7 +68,7 @@ class PrioritizedDispatch:
     payload: Any=field(compare=False)
 
 
-class RootController(_RobXObject):
+class RootController(_HivemindAbstractObject):
     """
     Basic impl of subscription service handler
     """
@@ -128,7 +128,9 @@ class RootController(_RobXObject):
         
 
     def __init__(self, **kwargs):
-        _RobXObject.__init__(self)
+        _HivemindAbstractObject.__init__(self)
+
+        self._settings = kwargs
 
         self._port_count = 0
 
@@ -155,6 +157,16 @@ class RootController(_RobXObject):
         self._response_lock = threading.RLock()
         self._response_condition = threading.Condition(self._response_lock)
         self._response_queue = queue.PriorityQueue()
+
+        #
+        # Data layer interface
+        #
+        database_config = {
+            'type' : 'sqlite',
+            'name' : 'hivemind'
+        }
+        database_config.update(kwargs.get('database', {}))
+        self._database = _DatabaseScafolding.start_database(database_config)
 
 
     @classmethod
@@ -230,8 +242,11 @@ class RootController(_RobXObject):
     @classmethod
     def register_service(cls, service):
         """
-        :param service: The _Service instance that contains the required
-        info.
+        Register a service. This is called from a _Node
+
+        :param service: The _Service instance that contains
+                        the required info.
+        :return: dict
         """
         return cls._register_post('service', {
             'node' : service.node.name,
@@ -242,8 +257,11 @@ class RootController(_RobXObject):
     @classmethod
     def register_subscription(cls, subscription):
         """
-        :param service: The _Subscription instance that contains the required
-        info.
+        Register a subscription. This is called from a _Node
+
+        :param subscription: The _Subscription instance that contains
+                             the required info.
+        :return: dict
         """
         return cls._register_post('subscription', {
             'node' : subscription.node.name,
@@ -279,7 +297,7 @@ class RootController(_RobXObject):
             # Before running our server, let's start our queue threads
             # that deal with linking back to other services.
             #
-            for i in range(2):
+            for i in range(self._settings.get('response_threads', 2)):
                 res_thread = threading.Thread(
                     target=self._dispatch,
                     name=f'response_thread_{i}'

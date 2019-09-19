@@ -1,0 +1,4 @@
+# Requirements for developers
+
+-r docs.txt
+-r requirements.txt

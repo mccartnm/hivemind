@@ -2,16 +2,16 @@
 import logging
 import threading
 
-from .base import _RobXObject
+from .base import _HivemindAbstractObject
 from .root import RootController
 
-class _Service(_RobXObject):
+class _Service(_HivemindAbstractObject):
     """
     Service object that can ship messages over a select command
     channel
     """
     def __init__(self, node, name, function):
-        _RobXObject.__init__(self)
+        _HivemindAbstractObject.__init__(self)
         self._node = node
         self._name = name
         self._function = function
@@ -111,7 +111,7 @@ class _Service(_RobXObject):
 
     def run(self):
         """
-        Overloaded from _RobXObject
+        Overloaded from _HivemindAbstractObject
         Begin a thread that will control the runtime of our
         service.
 

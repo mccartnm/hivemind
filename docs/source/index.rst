@@ -34,7 +34,7 @@ The Why
   :width: 350px
   :align: center
 
-In the modern app arena, we often have use for very atomic level operations that need to communicate with other such atomic services. This often leads to large waterfall code or, promises, or some form of chain-reactive system. In order to create a highly independent system, we turn to service/subscription models (also known as pub-sub models) in order to keep the low level "nodes" from needing anything but themselves and a connection to a sort-of central nervous system.
+In the modern app arena, we often have use for very atomic level operations that need to communicate with other such atomic services. This often leads to large waterfall code, promises, or some form of chain-reactive system when instead we want these operations to be self sufficient when perhaps the network isn't running as smooth as it should. In order to create a highly independent system, we turn to service/subscription models (also known as pub-sub models) in order to keep the low level "nodes" from needing anything but themselves and a connection to a sort-of central nervous system.
 
 This approach can take many forms and doesn't fit all use cases but it's a powerful tool for horizontally scaling your software.
 
@@ -51,6 +51,18 @@ This approach can take many forms and doesn't fit all use cases but it's a power
 
     basics/words
     basics/model
+
+.. toctree::
+    :maxdepth: 2
+    :caption: API
+
+    api/root
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Contributing
+
+    developers/codestandards.rst
 
 
 Indices and tables

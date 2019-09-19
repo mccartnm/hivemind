@@ -6,7 +6,7 @@ import threading
 from http.server import BaseHTTPRequestHandler
 
 
-class _RobXObject(object):
+class _HivemindAbstractObject(object):
     """
     Base class for many robx objects.
     """

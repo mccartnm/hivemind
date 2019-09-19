@@ -6,7 +6,7 @@ import traceback
 from http.server import ThreadingHTTPServer
 
 from . import log
-from .base import _RobXObject, _HandlerBase
+from .base import _HivemindAbstractObject, _HandlerBase
 from .root import RootController
 from .service import _Service
 from .subscription import _Subscription
@@ -42,7 +42,7 @@ class NodeSubscriptionHandler(_HandlerBase):
                 subscription.function(self.data)
 
 
-class _Node(_RobXObject):
+class _Node(_HivemindAbstractObject):
     """
     Virtual class that requires overloading to have any real
     funcionality.
@@ -52,7 +52,7 @@ class _Node(_RobXObject):
     """
 
     def __init__(self, name=None):
-        _RobXObject.__init__(self)
+        _HivemindAbstractObject.__init__(self)
 
         # The name of this node
         self._name = name or uuid.uuid4()
@@ -71,6 +71,7 @@ class _Node(_RobXObject):
 
         self.services()
         self.subscriptions()
+        self.data_tables()
 
 
     @property
@@ -90,7 +91,7 @@ class _Node(_RobXObject):
         instance.run()
         return instance
 
-    # -- Overloaded from _RobXObject
+    # -- Overloaded from _HivemindAbstractObject
 
     def run(self):
         """
@@ -132,6 +133,13 @@ class _Node(_RobXObject):
                 ] = subscription
                 RootController.register_subscription(subscription)
 
+            for data_table in self._data_tables:
+
+                self._handler_class.endpoints[
+                    data_table.endpoint
+                ] = subscription
+                RootController.register_data_table(data_table)
+
             RootController.enable_node(self)
             self._set_enabled()
             self._serve()
@@ -160,6 +168,11 @@ class _Node(_RobXObject):
         """ Register any default subscriptions here """
         return
 
+
+    def data_tables(self):
+        """ Register and default data tables for this now """
+        return
+
     # -- Public Methods
 
     def add_service(self, name, function):
@@ -173,7 +186,7 @@ class _Node(_RobXObject):
         )
         with self.lock:
             self._services.append(service)
-            service.run() # _RobXObject
+            service.run() # _HivemindAbstractObject
         return service
 
 
@@ -188,6 +201,16 @@ class _Node(_RobXObject):
         with self.lock:
             self._subscriptions.append(subscription)
         return subscription
+
+
+    def add_data_table(self, table_class):
+        """
+        Add an object to the data layer for persistent data control
+        """
+        endpoint = _Endpoint(self, table_class)
+        with self.lock:
+            self._endpoints.append(endpoint)
+        return endpoint
 
 
     def query(self, filters, callback):
