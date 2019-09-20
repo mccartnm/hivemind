@@ -1,0 +1,44 @@
+
+name: test-basics
+
+
+properties:
+
+  ptest:
+    windows: "win"
+    unix: "unix"
+  root_value: "test_on_{ptest}"
+  test_variable: "{root_value}/test_2"
+
+  home_test:
+    windows: "{homepath}"
+    unix: "{home}"
+
+  helper: 'a_root_value'
+  list_test: ['foo', '{helper}']
+
+  multipart: "my test multipart"
+  test_multipart: "{multipart...}"
+
+requires:
+  - git
+  - py::requests
+
+
+m__run_simple_echo(output):
+  - "echo {output...}"
+
+tasks:
+
+  run-me-simple:
+
+    help: |
+      A test command
+
+    parameters:
+      - [ "output", "str", "The output we should print" ]
+
+    commands:
+      - "echo {my_variable}"
+      - "echo {output}"
+

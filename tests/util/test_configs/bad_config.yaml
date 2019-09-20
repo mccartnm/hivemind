@@ -1,0 +1,10 @@
+
+
+name: bad-config-test
+
+
+properties:
+
+  # For testing cyclic dependencies
+  rec_a_val: "{rec_b_val}"
+  rec_b_val: "{rec_a_val}"
