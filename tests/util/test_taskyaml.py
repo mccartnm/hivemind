@@ -33,7 +33,7 @@ class TaskYamlTests(unittest.TestCase):
 
         proper = pdict.quick({
             'windows' : 'test_on_win/test_2',
-            'unix' : 'test_on_win/test_2'
+            'unix' : 'test_on_unix/test_2'
         })
         self.assertEqual(result, proper)
 
