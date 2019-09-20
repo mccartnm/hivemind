@@ -70,7 +70,7 @@ class TaskYaml(object):
 
 
     @classmethod
-    def load(self, path: str) -> TaskYaml:
+    def load(cls, path: str) -> TaskYaml:
         """
         Load a given yaml task file
 
@@ -89,7 +89,7 @@ class TaskYaml(object):
             raise IOError(str(e))
 
         name = data.get('name', os.path.basename(path))
-        return TaskYaml(name, data)
+        return cls(name, data)
 
 
     @property
