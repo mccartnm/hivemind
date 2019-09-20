@@ -1,8 +1,9 @@
 import os
 import sys
 
-# Get to the right path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Make sure we can import hivemind proper
+TEST_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(TEST_BASE_DIR))
 
 from hivemind import RootController, _Node
 
@@ -26,4 +27,10 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
 
     suite.addTests(loader.loadTestsFromTestCase(HiveMindTests))
+
+    # Test the util library
+    suite.addTests(loader.discover(
+        TEST_BASE_DIR + '/util'
+    ))
+
     unittest.TextTestRunner(verbosity=2).run(suite)
