@@ -7,7 +7,7 @@ branches:
 python:
 - '3.7'
 install:
-- pip install codecov
+- pip install -r requirements/development.txt
 script:
 - coverage run tests/test_hivemind.py
 after_success:
