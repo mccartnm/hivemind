@@ -28,6 +28,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import copy
 import shlex
 import logging
 import collections
@@ -39,6 +40,7 @@ import yaml
 # -- local
 from .platformdict import pdict
 from .misc import merge_dicts
+from ._expressions import _VariableExpansionExpression
 
 kProperties = 'properties'
 
@@ -293,9 +295,9 @@ class TaskYaml(object):
 
                 if expressions:
                     for expr in expressions:
-                        # pre_expression = _VariableExpansionExpression.compute(
-                        #     expr, pre_expression, self
-                        # )
+                        pre_expression = _VariableExpansionExpression.compute(
+                            expr, pre_expression, self
+                        )
                         pass # TODO
 
                 value = value.replace(needs_resolve, pre_expression)

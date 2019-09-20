@@ -19,6 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import sys
+from purepy import PureVirtualMeta
 
 def merge_dicts(dict1: dict, dict2: dict, combine_keys=None, ignore=None):
     """
@@ -112,3 +114,27 @@ def levenshtein(s1, s2):
         previous_row = current_row
     
     return previous_row[-1]
+
+
+# -- Metaclasses
+
+
+class SimpleRegistry(type):
+    """
+    A metaclass that builds a registry automatically
+    """
+    def __init__(cls, name, bases, dct) -> None:
+        if not hasattr(cls, '_registry'):
+            cls._registry = {} # Base Class
+        else:
+            cls._registry[cls.alias] = cls
+
+
+class PV_SimpleRegistry(PureVirtualMeta, SimpleRegistry):
+    """
+    Metaclass that builds a registry and contains the
+    purepy pure virtual functionality 
+    """
+    def __init__(cls, name, bases, dct) -> None:
+        PureVirtualMeta.__init__(cls, name, bases, dct)
+        SimpleRegistry.__init__(cls, name, bases, dct)

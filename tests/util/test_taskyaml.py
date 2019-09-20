@@ -67,3 +67,28 @@ class TaskYamlTests(unittest.TestCase):
         with self.assertRaises(ExpansionError):
             self._bad_config.expand_property('rec_b_val')
 
+
+    def test_basic_string_expressions(self):
+        """
+        String expressions! Wee!
+
+        Here, things get interesting.
+        """
+
+        mapping = {
+            'val_a' : 'value_a',
+            'val_b' : 'VALUE_B',
+            'val_c' : '    value_c   ',
+            'val_d' : ['{val_a}', 'random_value']
+        }
+
+        with self._task_config.overload_data(mapping):
+
+            result = self._task_config.expand(
+                '{val_a|up}_{val_b|low}_{val_c|trim}({val_d|join(", ")})'
+            )
+
+            self.assertEqual(
+                result,
+                'VALUE_A_value_b_value_c(value_a, random_value)'
+            )
