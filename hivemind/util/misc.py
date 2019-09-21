@@ -19,8 +19,48 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import os
+import re
 import sys
+import shlex
+import subprocess
+from typing import TypeVar, Generic
+
 from purepy import PureVirtualMeta
+
+T = TypeVar('TaskYaml')
+_quote_scan = re.compile(r"^\"[^\"]\"^")
+
+def run_process(command_with_args: (str, list),
+                custom_env: dict = {},
+                task_data: (T, None) = None) -> int:
+    """
+    Execute a command along with any arguments supplied. Should it fail,
+    return that exit code.
+
+    :param command_with_args: list|str of the command we're going to run
+    :param custom_env: Use custom environment values
+    :param task_data: optional TaskYaml instance
+    :return: int exit code
+    """
+    env = dict(od.environ, **custom_env)
+    if task_data is not None:
+        task_data.task_environment(env)
+
+    # Should this be just passed to the subprocess calls?
+    os.environ.update(env)
+
+    if not isinstance(command_with_args, (list, tuple)):
+        full_command = shlex.split(command_with_args)
+    else:
+        full_command = list(command_with_args)
+
+    for i, c in enumerate(full_command):
+        if _quote_scan.match(c):
+            full_command[i] = c[1:-1]
+
+    return subprocess.run(command).returncode
+
 
 def merge_dicts(dict1: dict, dict2: dict, combine_keys=None, ignore=None):
     """
@@ -126,8 +166,8 @@ class SimpleRegistry(type):
     def __init__(cls, name, bases, dct) -> None:
         if not hasattr(cls, '_registry'):
             cls._registry = {} # Base Class
-        else:
-            cls._registry[cls.alias] = cls
+        elif cls.name:
+            cls._registry[cls.name] = cls
 
 
 class PV_SimpleRegistry(PureVirtualMeta, SimpleRegistry):

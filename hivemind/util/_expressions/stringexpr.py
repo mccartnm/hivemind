@@ -26,16 +26,16 @@ Simple straight string expressions
 
 from purepy import override
 
-from .expr import _VariableExpansionExpression
+from .expr import _VariableExpansionExpression, ExprVariable
 
 class LowercaseExpr(_VariableExpansionExpression):
     """
     Lowercase a string
     """
-    alias = 'low'
+    name = 'low'
 
     @override()
-    def evalute(self, value, *args):
+    def evalute(self, value: ExprVariable, *args) -> str:
         return value.lower()
 
 
@@ -43,10 +43,10 @@ class UppercaseExpr(_VariableExpansionExpression):
     """
     Lowercase a string
     """
-    alias = 'up'
+    name = 'up'
 
     @override()
-    def evalute(self, value, *args):
+    def evalute(self, value: ExprVariable, *args) -> str:
         return value.upper()
 
 
@@ -54,10 +54,10 @@ class CapitalizeExpr(_VariableExpansionExpression):
     """
     Lowercase a string
     """
-    alias = 'cap'
+    name = 'cap'
 
     @override()
-    def evalute(self, value, *args):
+    def evalute(self, value: ExprVariable, *args) -> str:
         return " ".join(w.capitalize() for w in value.split())
 
 
@@ -66,10 +66,10 @@ class QuoteExptr(_VariableExpansionExpression):
     Quote a given string with the provided char(s)
     quoute(<char>='"')
     """
-    alias = 'quote'
+    name = 'quote'
 
     @override()
-    def evalute(self, value, *args):
+    def evalute(self, value: ExprVariable, *args) -> str:
         char = '"'
         if args:
             char = args[0]
@@ -80,10 +80,10 @@ class TrimExpr(_VariableExpansionExpression):
     """
     Trime the string of leading and trailing whitespace
     """
-    alias = 'trim'
+    name = 'trim'
 
     @override()
-    def evalute(self, value, *args):
+    def evalute(self, value: ExprVariable, *args) -> str:
         return value.strip()
 
 
@@ -92,10 +92,10 @@ class TruncateExpr(_VariableExpansionExpression):
     Truncate a string based on the arguments supplied.
     trunc(<count>, <from_start>=False)
     """
-    alias = 'trunc'
+    name = 'trunc'
 
     @override()
-    def evalute(self, value, *args):
+    def evalute(self, value: ExprVariable, *args) -> str:
         if not args:
             return value
         

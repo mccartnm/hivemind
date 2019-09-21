@@ -19,11 +19,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Union
 from purepy import pure_virtual
+
 from ..misc import PV_SimpleRegistry
 
 T = TypeVar('TaskYaml')
+ExprVariable = Union[str, list]
 
 class ExpressionError(Exception):
     pass
@@ -37,7 +39,7 @@ class _VariableExpansionExpression(object, metaclass=PV_SimpleRegistry):
 
         proper docs
     """
-    alias = None
+    name = None
 
     def __init__(self, task_data: T) -> None:
         self._task_data = task_data
@@ -46,8 +48,8 @@ class _VariableExpansionExpression(object, metaclass=PV_SimpleRegistry):
     @classmethod
     def _get_expressions_layout(cls) -> str:
         output = ''
-        for alias, cls_ in cls._registry.items():
-            output += ' - ' + alias + ': \n'
+        for name, cls_ in cls._registry.items():
+            output += ' - ' + name + ': \n'
             output += (' ' * 4) + cls_.__doc__.strip()
             output += '\n'
         return output[:-1] # Remove the last new line
@@ -62,7 +64,7 @@ class _VariableExpansionExpression(object, metaclass=PV_SimpleRegistry):
 
 
     @pure_virtual
-    def evalute(self, value, *args):
+    def evalute(self, value: ExprVariable, *args) -> str:
         """
         A pure virtual function that must be overloaded to handle
         the expression
@@ -71,23 +73,23 @@ class _VariableExpansionExpression(object, metaclass=PV_SimpleRegistry):
 
 
     @classmethod
-    def compute(cls, alias: str, value: (str, list), task_data: T) -> str:
+    def compute(cls, name: str, value: ExprVariable, task_data: T) -> str:
         """
         Evaluate the expression.
 
-        :param alias: The name of the command, this can potentially contain arguments
+        :param name: The name of the command, this can potentially contain arguments
         :param value: The value that we're going run the expression on
         :param task_data: TaskYaml instance with our proerties and such
         :return: str computed value
         """
         args = []
-        search = alias.strip()
+        search = name.strip()
 
-        if '(' in alias:
-            search = alias[:alias.index('(')]
+        if '(' in name:
+            search = name[:name.index('(')]
 
             # For the time being, we're assuming that the 
-            args_unparsed = alias[alias.index('(') + 1 : -1]
+            args_unparsed = name[name.index('(') + 1 : -1]
 
             current_arg = ''
             last_index = len(args_unparsed) - 1

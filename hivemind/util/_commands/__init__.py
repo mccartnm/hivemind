@@ -18,35 +18,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-# --
-
-Simple expressions that can be run on iterables
 """
-from purepy import override
 
-from .expr import _VariableExpansionExpression, ExprVariable
+from .comm import _AbstractCommand
 
+# -- Build our registry
 
-class JoinExpr(_VariableExpansionExpression):
-    """
-    Join a list of values into a common string join(<sep>)
-    """
-    name = 'join'
-
-    @override()
-    def evalute(self, value: ExprVariable, *args) -> str:
-        if not args:
-            return ''.join(value)
-        return args[0].join(map(str, value))
-
-
-class CountExpr(_VariableExpansionExpression):
-    """
-    Given an iterable, return the number of items.
-    """
-    name = 'count'
-
-    @override()
-    def evalute(self, value: ExprVariable, *args) -> str:
-        return str(len(value))
+from . import iocomm

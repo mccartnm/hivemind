@@ -191,6 +191,35 @@ class TaskYaml(object):
         del self._active_platform
 
 
+    def task_environment(self, env) -> None:
+        """
+        Config files can have env keys set on the root to augment commands
+        being processed
+        :param env: mapping that we can update
+        """
+        if not self['env']:
+            return
+
+        for k, v in self['env'].items():
+
+            if isinstance(v, dict):
+                v = pdict(v)
+
+            # We should probably so some verification that this
+            # is okay
+            expanded = self.expand(v, env, type(v))
+
+            if isinstance(v, (list, tuple)):
+                expanded = os.pathsep.join(expanded)
+                if k in env:
+                    env[k] += os.pathsep + expanded
+                else:
+                    env[k] = expanded
+
+            else:
+                env[k] = expanded
+
+
     def add_attribute(self, key, value, global_: bool=False):
         """
         Add an attribute to the properties

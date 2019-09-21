@@ -33,4 +33,5 @@ if __name__ == "__main__":
         TEST_BASE_DIR + '/util'
     ))
 
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    res = unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
+    sys.exit(1 if not res else 0)
