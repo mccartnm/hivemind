@@ -59,7 +59,7 @@ class _FileIOCommand(_AbstractCommand):
         )
         parser.add_argument(
             '-x', '--exclude',
-            nargs='+',
+            action='append',
             help='Ignore these file patterns'
         )
         parser.add_argument(
@@ -88,7 +88,7 @@ class _FileIOCommand(_AbstractCommand):
             self.data.src.replace('\\', '/')
         )
 
-        logging.info(
+        logging.debug(
             f'{self.name.capitalize()}ing: {self.data.src} -> {self.data.dst}'
         )
 
@@ -116,7 +116,7 @@ class _FileIOCommand(_AbstractCommand):
             ignore_patterns = self.data.exclude or []
             ignore_func = shutil.ignore_patterns(*ignore_patterns)
 
-            for d in data:
+            for d in source_files:
                 base = d.replace('\\', '/').replace(root, '')
 
                 if root:
@@ -150,11 +150,11 @@ class _FileIOCommand(_AbstractCommand):
                     else:
                         shutil.rmtree(dest_)
 
-                self.do_(d, dest_, ignore_function)
+                self.do_(d, dest_, ignore_func)
 
         else:
             # A single file is being moved
-            if not os.path.isfile(self.data.src):
+            if not os.path.exists(self.data.src):
                 raise CommandError(
                     f'The file: "{self.data.src}" cannot be found!'
                 )
@@ -191,9 +191,9 @@ class CopyCommand(_FileIOCommand):
         # Single file to single file
         - ":copy ~/some_folder/a_file.txt ~/some_dir/a_file_copy.txt"
     """
-    alias = 'copy'
+    name = 'copy'
 
-    def do_(self, src: str, dst: str, ignore_function) -> None:
+    def do_(self, src: str, dst: str, ignore_function = None) -> None:
         if os.path.isdir(src):
             shutil.copytree(
                 src, dst, symlinks=True, ignore=ignore_function
@@ -218,7 +218,7 @@ class MoveCommand(_FileIOCommand):
         # Single file to single file
         - ":move ~/some_folder/a_file.txt ~/some_dir/a_file_copy.txt"
     """
-    alias = 'move'
+    name = 'move'
 
     def do_(self, src: str, dst: str) -> None:
         if os.path.isfile(src) and os.path.isdir(dst):
@@ -228,7 +228,37 @@ class MoveCommand(_FileIOCommand):
             shutil.move(src, dst)
 
 
-class ChangeDirCommand(_AbstractCommand):
+class RemoveComm(_AbstractCommand):
+    """
+    Delete some shit!
+    """
+    name = 'rm'
+
+    def description(self) -> str:
+        return 'Delete files/folders'
+
+
+    def populate_parser(self, parser: ArgumentParser) -> None:
+        parser.add_argument(
+            'path',
+            help='Files to remove (accepts glob patters)'
+        )
+
+
+    def exec_(self, task_data: T) -> ComputeReturn:
+        files_to_remove = glob.glob(self.data.path)
+
+        for to_remove in files_to_remove:
+            if not os.path.exists(to_remove):
+                continue
+
+            if os.path.isdir(to_remove):
+                shutil.rmtree(to_remove)
+            else:
+                os.unlink(to_remove)
+
+
+class ChangeDirComm(_AbstractCommand):
     """
     Directory changing with pushd/popd fun!
     """
