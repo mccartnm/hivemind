@@ -114,5 +114,10 @@ class SourceCom(_AbstractCommand):
                 lines = env_read.read().splitlines()
 
             for line in lines:
-                var, value = line.strip().split('=', 1)
+
+                line = line.strip()
+                if not '=' in line:
+                    continue
+
+                var, value = line.split('=', 1)
                 os.environ[var] = value
