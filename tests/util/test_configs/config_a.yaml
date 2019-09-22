@@ -41,4 +41,7 @@ tasks:
     commands:
       - "echo {my_variable}"
       - "echo {output}"
+      - if: "True"
+        than: "echo bar"
+        else: "echo baz"
 

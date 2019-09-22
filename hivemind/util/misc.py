@@ -23,8 +23,11 @@ import os
 import re
 import sys
 import shlex
+import shutil
+import tempfile
 import subprocess
-from typing import TypeVar, Generic
+from contextlib import contextmanager
+from typing import TypeVar, Generic, Callable, Generator
 
 from purepy import PureVirtualMeta
 
@@ -43,7 +46,7 @@ def run_process(command_with_args: (str, list),
     :param task_data: optional TaskYaml instance
     :return: int exit code
     """
-    env = dict(od.environ, **custom_env)
+    env = dict(os.environ, **custom_env)
     if task_data is not None:
         task_data.task_environment(env)
 
@@ -59,7 +62,7 @@ def run_process(command_with_args: (str, list),
         if _quote_scan.match(c):
             full_command[i] = c[1:-1]
 
-    return subprocess.run(command).returncode
+    return subprocess.run(full_command).returncode
 
 
 def merge_dicts(dict1: dict, dict2: dict, combine_keys=None, ignore=None):
@@ -122,7 +125,7 @@ def merge_dicts(dict1: dict, dict2: dict, combine_keys=None, ignore=None):
             yield (k, dict2[k])
 
 
-def levenshtein(s1, s2):
+def levenshtein(s1: str, s2: str) -> int:
     """
     Pythonic levenshtein math to quickly determine how many "edits" two strings are
     differently than one another.
@@ -154,6 +157,40 @@ def levenshtein(s1, s2):
         previous_row = current_row
     
     return previous_row[-1]
+
+
+@contextmanager
+def cd(dir_: str, cleanup: Callable = lambda: True) -> Generator[None, None, None]:
+    """
+    Context manager for swapping to a directory for a given
+    period of time.
+    :param dir_: The directory to change to
+    :param cleanup: callable that we'll execute upon finishing the command
+    :return: None
+    """
+    previous = os.getcwd()
+    os.chdir(os.path.expanduser(dir_))
+    try:
+        yield
+    finally:
+        os.chdir(previous)
+        cleanup()
+
+
+@contextmanager
+def temp_dir(change_dir: bool=True) -> Generator[str, None, None]:
+    """
+    Quick temp directory that we move into to do our work
+    :return: The new temp directory (we've also cd'd into it) 
+    """
+    dirpath = tempfile.mkdtemp()
+    def _clean():
+        shutil.rmtree(dirpath)
+    if change_dir:
+        with cd(dirpath, _clean):
+            yield dirpath
+    else:
+        yield dirpath
 
 
 # -- Metaclasses

@@ -7,6 +7,8 @@ sys.path.append(os.path.dirname(TEST_BASE_DIR))
 
 from hivemind import RootController, _Node
 
+from hivemind.core import log
+
 import unittest
 
 class HiveMindTests(unittest.TestCase):
@@ -23,6 +25,7 @@ class HiveMindTests(unittest.TestCase):
 # -- Main Function to run tests
 # ----------------------------------------------------------------------------------------------
 if __name__ == "__main__":
+    log.start(False)
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 

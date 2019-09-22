@@ -23,14 +23,15 @@ SOFTWARE.
 
 Abstract command utilities
 """
+from __future__ import annotations
 
 from argparse import ArgumentParser, REMAINDER, Namespace
 
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Union
 from ..misc import SimpleRegistry, run_process
 
 T = TypeVar('TaskYaml')
-
+ComputeReturn = Union[str, None]
 
 class CommandError(RuntimeError):
     """ Exception pertaining to the command tools """
@@ -96,7 +97,7 @@ class _AbstractCommand(object, metaclass=SimpleRegistry):
         :return: argparge.Namespace instance that we've built
                  from our arguments
         """
-        assert self._data is not None,
+        assert self._data is not None, \
                "Arguments have not been parsed!"
         return self._data
 
@@ -111,7 +112,7 @@ class _AbstractCommand(object, metaclass=SimpleRegistry):
         :return: subclass of _AbstractCommand
         """
         if not name.lower() in cls._registry:
-            raise CommandError(f'HM Command not found {name}')
+            raise CommandError(f'HM Command not found: "{name}"')
         return cls._registry[name.lower()]
     
 
@@ -142,7 +143,7 @@ class _AbstractCommand(object, metaclass=SimpleRegistry):
         )
 
 
-    def exec_(self, task_data: T) -> None:
+    def exec_(self, task_data: T) -> ComputeReturn:
         """
         Execute the command itself. By default this just runs the
         arguments in a subprocess. Custom commands will augment this
@@ -160,6 +161,7 @@ class _AbstractCommand(object, metaclass=SimpleRegistry):
 
     # -- Proctected methods
 
+    # @protected('CommandParser') I wouldn't mind this
     def _process_args(self) -> None:
         """
         To go from raw arguments -> processed parameters we throw

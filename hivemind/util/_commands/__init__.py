@@ -25,3 +25,5 @@ from .comm import _AbstractCommand
 # -- Build our registry
 
 from . import iocomm
+from . import funccomm
+from . import scopecomm

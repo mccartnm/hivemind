@@ -31,7 +31,7 @@ import fnmatch
 
 from argparse import ArgumentParser
 
-from .comm import _AbstractCommand, CommandError, T
+from .comm import _AbstractCommand, CommandError, T, ComputeReturn
 
 
 class _FileIOCommand(_AbstractCommand):
@@ -78,7 +78,7 @@ class _FileIOCommand(_AbstractCommand):
             'dst', help='The destination location'
         )
 
-    def run(self, task_data: T) -> None:
+    def exec_(self, task_data: T) -> ComputeReturn:
 
         # First, get all possible source files. Based on them,
         # we'll utilize the destination accordingly
@@ -133,7 +133,7 @@ class _FileIOCommand(_AbstractCommand):
                     continue
 
                 # Clean up the file if it exists
-                if os.path.exists(dest_)
+                if os.path.exists(dest_):
                     if not self.data.force:
                         if self.data.skip_existing:
                             continue

@@ -220,7 +220,70 @@ class TaskYaml(object):
                 env[k] = expanded
 
 
-    def add_attribute(self, key, value, global_: bool=False):
+    def get_method(self, mstring: str):
+        """
+        Obtain the method we;re looking for as well as the arguments
+        we may want.
+
+        :param mstring: The string our method command is using.
+
+            .. code-block:: yaml
+
+                'method my_command({foo})'
+
+        :return: tuple(list, dict)
+        """
+        commands = []
+        kwargs = {}
+
+        supplied = [] # provided
+
+        # Grep for the arguments we're supplying
+        if '(' in mstring:
+            fidx = mstring.index('(')
+            ridx = mstring.index(')')
+            found_args = mstring[fidx + 1:ridx]
+            if found_args:
+                found_args = found_args.split(',')
+                supplied = [x.strip() for x in found_args]
+
+            mstring = mstring[:fidx]
+
+        for key, value in self._data.items():
+            if key.startswith('m__'):
+
+                mname = key[:key.index('(')].replace('m__', '', 1)
+                if mname == mstring:
+                    commands = self[key]
+
+                    #
+                    # Once we have the method, we build the final
+                    # values of our arguments based on what we
+                    # supplied
+                    #
+                    fidx = key.index('(') + 1
+                    ridx = key.index(')')
+                    m_required_args = key[fidx:ridx]
+
+                    if m_required_args:
+                        m_arg_names = m_required_args.split(',')
+                        m_arg_names = [x.strip() for x in m_arg_names]
+
+                    scount = len(supplied)
+                    acount = len(m_arg_names)
+                    if scount != acount:
+                        raise RuntimeError(
+                            f'Invalid number of arguments for {mstring}.'
+                            f' Expected: {acount}, got: {scount}'
+                        )
+
+                    for i in range(len(supplied)):
+                        kwargs[m_arg_names[i]] = self.expand(supplied[i])
+
+        return commands, kwargs
+
+
+    def add_attribute(self, key, value, global_: bool=False) -> None:
         """
         Add an attribute to the properties
 
@@ -232,7 +295,7 @@ class TaskYaml(object):
         self._data[kProperties][key] = value
         if global_:
             for d in self._data_deque:
-                data[kProperties][key] = value
+                d[kProperties][key] = value
 
 
     def expand(self, value: (str, list), env=None, found=None, rtype=str) -> (str, list):
