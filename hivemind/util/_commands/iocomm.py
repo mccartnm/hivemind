@@ -28,6 +28,7 @@ import glob
 import shutil
 import logging
 import fnmatch
+import collections
 
 from argparse import ArgumentParser
 
@@ -45,10 +46,10 @@ class _FileIOCommand(_AbstractCommand):
         it's still an abstract command and won't be added to the
         registry
     """
-
     def description(self) -> str:
         n = self.name.capitalize()
         return f'{n} files from one location to another'
+
 
     def populate_parser(self, parser: ArgumentParser) -> None:
         parser.add_argument(
@@ -77,6 +78,7 @@ class _FileIOCommand(_AbstractCommand):
         parser.add_argument(
             'dst', help='The destination location'
         )
+
 
     def exec_(self, task_data: T) -> ComputeReturn:
 
@@ -224,3 +226,50 @@ class MoveCommand(_FileIOCommand):
                         os.path.join(dst, os.path.basename(src)))
         else:
             shutil.move(src, dst)
+
+
+class ChangeDirCommand(_AbstractCommand):
+    """
+    Directory changing with pushd/popd fun!
+    """
+    name = 'cd'
+
+    def description(self) -> str:
+        return 'Change the working directory. The changing of directories' \
+               ' with this command stacks to make it easy to pop back'
+
+
+    def populate_parser(self, parser: ArgumentParser) -> None:
+        parser.add_argument(
+            '-p', '--pop',
+            action='store_true',
+            help='Pop back to the previous directory (if any)'
+        )
+
+        parser.add_argument(
+            'dir',
+            nargs='?',
+            default='',
+            help='The directory to switch to. Not needed if --pop'
+                 'is supplied.'
+        )
+
+
+    def exec_(self, task_data: T) -> ComputeReturn:
+        """
+        Change the current working directory to a new location
+        """
+        goto_dir = self.data.dir
+        if self.data.pop:
+            if hasattr(task_data, '_pushpop_dirs'):
+                if len(task_data._pushpop_dirs):
+                    goto_dir = task_data._pushpop_dirs.pop()
+
+        if not hasattr(task_data, '_pushpop_dirs'):
+            task_data._pushpop_dirs = collections.deque()
+
+        if not self.data.pop:
+            task_data._pushpop_dirs.append(os.getcwd())
+
+        logging.info(f'Chage Directory -> {goto_dir}')
+        os.chdir(goto_dir)
