@@ -33,7 +33,7 @@ import collections
 from argparse import ArgumentParser
 
 from .comm import _AbstractCommand, CommandError, T, ComputeReturn
-
+from .. import compression
 
 class _FileIOCommand(_AbstractCommand):
     """
@@ -301,5 +301,252 @@ class ChangeDirComm(_AbstractCommand):
         if not self.data.pop:
             task_data._pushpop_dirs.append(os.getcwd())
 
-        logging.info(f'Chage Directory -> {goto_dir}')
+        logging.debug(f'Chage Directory -> {goto_dir}')
         os.chdir(goto_dir)
+
+
+class MkDirComm(_AbstractCommand):
+    """
+    Directory creation
+    """
+    name = 'mkdir'
+
+    def description(self) -> str:
+        return 'Directory creation'
+
+
+    def populate_parser(self, parser: ArgumentParser) -> None:
+        parser.add_argument(
+            'dir',
+            help='The directory to make'
+        )
+
+
+    def exec_(self, task_data: T) -> ComputeReturn:
+        if os.path.isfile(self.data.dir):
+            raise CommandError(
+                f'Cannot create {self.data.dir}!'
+            )
+        if not os.path.exists(self.data.dir):
+            os.makedirs(self.data.dir)
+
+
+class ReadComm(_AbstractCommand):
+    """
+    Read from a file into a variable
+    """
+    name = 'read'
+
+    def description(self) -> str:
+        return 'Read file contents into a variable'
+
+
+    def populate_parser(self, parser: ArgumentParser) -> None:
+        parser.add_argument(
+            '-b', '--bytes',
+            action='store_true',
+            help='Open the files as a bytes object'
+        )
+
+        parser.add_argument(
+            '-g', '--global-var',
+            action='store_true',
+            help='Pass if the variable should be global'
+        )
+
+        parser.add_argument(
+            'file',
+            help='The file to read from'
+        )
+
+        parser.add_argument(
+            'property',
+            help='The output property to use'
+        )
+
+
+    def exec_(self, task_data: T) -> ComputeReturn:
+        read_type = 'rb' if self.data.bytes else 'r'
+        logging.debug(f'Reading {self.data.file}')
+
+        output = None
+        try:
+            with open(self.data.file, read_type) as f:
+                output = f.read()
+        except OSError as e:
+            raise CommandError(
+                f'Could not read file: {self.data.file}. {e}'
+            )
+
+        task_data.add_attribute(
+            self.data.property,
+            output,
+            global_=self.data.global_var
+        )
+
+
+class WriteComm(_AbstractCommand):
+    """
+    Write command
+    """
+    name = 'write'
+
+    def description(self) -> str:
+        return 'Write to a file'
+
+
+    def populate_parser(self, parser: ArgumentParser) -> None:
+        parser.add_argument(
+            '-a', '--append',
+            action='store_true',
+            help='Append to the end of the file'
+        )
+
+        parser.add_argument(
+            '-m', '--make-dirs',
+            action='store_true',
+            help='Create any required directories'
+        )
+
+        parser.add_argument(
+            'content',
+            help='The data to be pushed into the file'
+        )
+
+        parser.add_argument(
+            'file',
+            help='The filepath to pump the data into'
+        )
+
+
+    def exec_(self, task_data: T) -> ComputeReturn:
+        open_type = 'a' if self.data.append else 'w'
+        if not os.path.isfile(self.data.file):
+            open_type = 'w'
+
+        file = os.path.abspath(self.data.file)
+
+        logging.debug(f'Write to file: {self.data.file}')
+
+        if self.data.make_dirs:
+            if not os.path.isdir(os.path.dirname(file)):
+                os.makedirs(os.path.dirname(file))
+
+        try:
+            with open(file, open_type) as f:
+                f.write(self.data.content)
+        except OSError as e:
+            raise CommandError(
+                f'Could not open file: {self.data.file}. {e}'
+            )
+
+
+class ZipComm(_AbstractCommand):
+    """
+    Zip up files/directories
+    """
+    name = 'zip'
+
+    def description(self) -> str:
+        return '(Un)Zip files/directories - recursive by default'
+
+
+    def populate_parser(self, parser: ArgumentParser) -> None:
+        parser.add_argument(
+            'archive',
+            help='The name of the archive to create'
+        )
+
+        parser.add_argument(
+            '-x', '--extract',
+            action='store_true',
+            help='Extract the archive (use -o to declare output location)'
+        )
+
+        parser.add_argument(
+            '-o', '--output',
+            help='Directory to move files into. Directory must exist'
+        )
+
+        parser.add_argument(
+            '-e', '--exclude',
+            help='File patterns to ignore (unix pattern matching ok)',
+            action='append'
+        )
+
+        parser.add_argument(
+            '-f', '--file',
+            help='File or directory to include/unpack (can be used multiple times)',
+            action='append'
+        )
+
+        parser.add_argument(
+            '-r', '--root',
+            help='Alternate root location to use. Default is the commmon prefix'
+        )
+
+        parser.add_argument(
+            '-a', '--append',
+            help='If the archive already exists, just append to it.',
+            action='store_true'
+        )
+
+        parser.add_argument(
+            '-n', '--noisey',
+            action='store_true',
+            help='Log files being manipulated'
+        )
+
+
+    def _common_prefix(self, files: list) -> str:
+        """
+        Platform agnostic way to determine the common prefix in a set
+        of paths
+        :param files: list[str] of files to check on
+        :return: str
+        """
+        return os.path.commonprefix(files)
+
+
+    def run(self, task_data: T) -> ComputeReturn:
+        """
+        Run the command, zipping up files as needed
+        """
+        raw_files = self.data.file
+
+        if self.data.extract:
+            compression.unzip_files(
+                archive=self.data.archive,
+                files=raw_files or [],
+                ignore=self.data.exclude or [],
+                output=self.data.output or os.getcwd(),
+                noisey=self.data.noisey
+            )
+
+        else:
+            files = []
+            for file_info in raw_files:
+                files.extend(glob.glob(file_info))
+
+            # Make sure we have absolute paths
+            ready_files = list(map(os.path.abspath, files))
+
+            # With said paths, make sure we all have the same slash direction
+            ready_files = list(map(lambda x: x.replace('\\', '/'), ready_files))
+
+            root = self.data.root
+            if root is None:
+                root = self._common_prefix(ready_files)
+
+            name = self.data.archive
+            if not name.endswith('.zip'):
+                name += '.zip'
+
+            compression.zip_files(
+                name=name,
+                files=ready_files,
+                root=root,
+                mode='a' if self.data.append else 'w',
+                ignore=self.data.exclude or [],
+                noisey=self.data.noisey
+            )

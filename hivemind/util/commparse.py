@@ -88,22 +88,47 @@ class CommandParser(object):
         elif isinstance(commands, dict):
             # Conditional execution
 
-            if not 'if' in commands:
-                raise ComputeError(
-                    "'if' required for conditional commands"
-                )
+            if 'for' in commands:
 
-            if not 'than' in commands:
-                raise ComputeError(
-                    "'than' commands required from conditional commands"
-                )
+                if not 'than' in commands:
+                    raise ComputeError(
+                        '"than" commands required for conditional commands'
+                    )
 
-            if self._evaulate(commands['if']):
-                self._compute(commands['than'])
-            elif 'else' in commands:
-                self._compute(commands['else'])
+                # We have an iteration
+                for_options = commands['for'].split(' ')
+                for_options = list(filter(lambda x: x != '', for_options))
 
-            # Should we add elif1, elif2, etc?
+                if not len(for_options) == 3:
+                    raise ComputeError(
+                        'for loop requires three arguments'
+                    )
+
+                param_name, _, property_name = for_options
+                iterable = self._task_data.properties[property_name[1:-1]]
+
+                for item in iterable:
+                    with self._task_data.overload_data({param_name:item}):
+                        self._compute(commands['than'])
+
+            else:
+
+                if not 'if' in commands:
+                    raise ComputeError(
+                        "'if' required for conditional commands"
+                    )
+
+                if not 'than' in commands:
+                    raise ComputeError(
+                        "'than' commands required from conditional commands"
+                    )
+
+                if self._evaulate(commands['if']):
+                    self._compute(commands['than'])
+                elif 'else' in commands:
+                    self._compute(commands['else'])
+
+                # Should we add elif1, elif2, etc?
 
         elif isinstance(commands, str):
             # A command!

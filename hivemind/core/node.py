@@ -32,6 +32,7 @@ from .root import RootController
 from .service import _Service
 from .subscription import _Subscription
 
+from ..util.misc import SimpleRegistry
 
 class NodeSubscriptionHandler(_HandlerBase):
     """
@@ -63,7 +64,7 @@ class NodeSubscriptionHandler(_HandlerBase):
                 subscription.function(self.data)
 
 
-class _Node(_HivemindAbstractObject):
+class _Node(_HivemindAbstractObject, metaclass=SimpleRegistry):
     """
     Virtual class that requires overloading to have any real
     funcionality.

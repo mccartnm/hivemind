@@ -12,6 +12,8 @@ CONFIG_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), 'test_configs'
 )).replace('\\', '/')
 
+from hivemind.util import global_settings
+
 class CommandTests(unittest.TestCase):
     """
     Some initial tests for the task utility that is the
@@ -241,3 +243,11 @@ class CommandTests(unittest.TestCase):
                     (not os.path.isfile(f'{source_dir}/foo.txt')) and \
                     os.path.isfile(f'{dest_dir}/foo.txt')
                 )
+
+
+    def test_read_global_settings(self):
+        """
+        We set this value long ago - just make sure the global settings stick with
+        us.
+        """
+        self.assertEqual(global_settings['test_global_settings'], 'a value')

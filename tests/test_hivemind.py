@@ -10,6 +10,11 @@ from hivemind import RootController, _Node
 from hivemind.core import log
 
 import unittest
+from hivemind.util import global_settings
+
+global_settings.set({
+    'test_global_settings' : 'a value'
+})
 
 class HiveMindTests(unittest.TestCase):
     """

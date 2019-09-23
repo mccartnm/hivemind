@@ -31,6 +31,7 @@ import sys
 import copy
 import shlex
 import logging
+import datetime
 import collections
 from contextlib import contextmanager
 
@@ -113,6 +114,15 @@ class TaskYaml(object):
     def properties(self):
         return self[kProperties]
 
+
+    @property
+    def hm_util_path(self):
+        return os.path.dirname(os.path.abspath(__file__))
+
+
+    @property
+    def datetime(self):
+        return datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
 
 
     def __repr__(self):

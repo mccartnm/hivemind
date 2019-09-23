@@ -1,0 +1,56 @@
+#
+# Config for setting up a new hive. We have the means, might
+# as well use it.
+#
+
+properties:
+  start_files:
+    - nodes/__init__.py
+    - config/starter.yaml
+    - root/__init__.py
+    - hive.py
+
+  hive_header: |
+    """
+    Hivemind {_hive_name} - Started on {datetime}
+    """
+
+  nodes_init: |
+    # -- Add Node Imports Here
+
+
+  node_import: |
+    # from .{_node_name|low} import *
+
+#
+# Initialize the folder structure for our users
+#
+init_startup_commands:
+  - ':mkdir {_hive_name}'
+  - ':cd {_hive_name}'
+  - for: "file in {start_files}"
+    than:
+      - ':write --make-dirs "" {file}'
+
+  # Write some initial content to these files
+  - ':read {hm_util_path}/_static_config/settings_default.py dsettings'
+  - ':read {hm_util_path}/_static_config/default_root.py rootinit'
+  - ':write {hive_header} hive.py'
+  - ':write -a {dsettings} hive.py'
+  - ':write {nodes_init} nodes/__init__.py'
+  - ':write {rootinit} root/__init__.py'
+  - ':cd --pop'
+
+
+#
+# When adding a new node, we give the user some initial
+# utilities for setting that up. The nice part is, we can
+# use the variable expansion system to layout the node's
+# file in a pretty way
+#
+init_new_node:
+  - ':mkdir nodes/{_node_name|low}'
+  - ':read {hm_util_path}/_static_config/default_node.py initnode'
+  - ':write "" nodes/{_node_name|low}/__init__.py'
+  - ':write {initnode} nodes/{_node_name|low}/{_node_name|low}.py'
+  - ':write -a {node_import} nodes/__init__.py'
