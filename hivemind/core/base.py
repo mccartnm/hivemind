@@ -31,13 +31,32 @@ class _HivemindAbstractObject(object):
     """
     Base class for many robx objects.
     """
-    def __init__(self):
+    def __init__(self, logger: logging.Logger = None):
         self._lock = threading.RLock() # reentrant
+        self._logger = logger
+
+
+    def __getattr__(self, key):
+        """
+        Routing utility for logging reasons
+        """
+        if key.startswith('log_'):
+            return lambda msg: self._log(key.replace('log_', ''), msg)
+        raise AttributeError(
+            f'{self.__class__.__name__} has no attribute "{key}"'
+        )
 
 
     @property
     def lock(self):
         return self._lock
+
+
+    def _log(self, type, msg):
+        if self._logger:
+            getattr(self._logger, type)(msg)
+        else:
+            getattr(logging, type)(msg)
 
 
     def run(self):

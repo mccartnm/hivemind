@@ -32,7 +32,7 @@ from .root import RootController
 from .service import _Service
 from .subscription import _Subscription
 
-from ..util.misc import SimpleRegistry
+from ..util.misc import BasicRegistry
 
 class NodeSubscriptionHandler(_HandlerBase):
     """
@@ -64,7 +64,7 @@ class NodeSubscriptionHandler(_HandlerBase):
                 subscription.function(self.data)
 
 
-class _Node(_HivemindAbstractObject, metaclass=SimpleRegistry):
+class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
     """
     Virtual class that requires overloading to have any real
     funcionality.
@@ -73,8 +73,8 @@ class _Node(_HivemindAbstractObject, metaclass=SimpleRegistry):
     after registering with the RootController anything it hosts.
     """
 
-    def __init__(self, name=None):
-        _HivemindAbstractObject.__init__(self)
+    def __init__(self, name=None, **kwargs):
+        _HivemindAbstractObject.__init__(self, **kwargs)
 
         # The name of this node
         self._name = name or uuid.uuid4()
@@ -155,27 +155,18 @@ class _Node(_HivemindAbstractObject, metaclass=SimpleRegistry):
                 ] = subscription
                 RootController.register_subscription(subscription)
 
-            for data_table in self._data_tables:
+            # for data_table in self._data_tables:
 
-                self._handler_class.endpoints[
-                    data_table.endpoint
-                ] = subscription
-                RootController.register_data_table(data_table)
+            #     self._handler_class.endpoints[
+            #         data_table.endpoint
+            #     ] = subscription
+            #     RootController.register_data_table(data_table)
 
             RootController.enable_node(self)
             self._set_enabled()
             self._serve()
-            return
 
-        except KeyboardInterrupt as err:
-            RootController.deregister_node(self)
-            self.shutdown()
-            return
-
-        except Exception as e:
-            logging.critical("Issue with executing node.")
-            list(map(logging.critical,
-                     traceback.format_exc().split('\n')))
+        finally:
             self.shutdown()
             return
 
@@ -246,6 +237,7 @@ class _Node(_HivemindAbstractObject, metaclass=SimpleRegistry):
 
 
     def shutdown(self):
+        RootController.deregister_node(self)
         for service in self._services:
             service.shutdown()
 
@@ -272,8 +264,7 @@ class _Node(_HivemindAbstractObject, metaclass=SimpleRegistry):
         Here's where the main node thread starts up and runs whatever
         functionality is required.
         """
-
-        logging.debug(f"Node subscription set: {self._port}")
+        self.log_debug(f"Node subscription set: {self._port}")
         server_adress = ('', self._port)
         httpd = ThreadingHTTPServer(
             server_adress, self._handler_class

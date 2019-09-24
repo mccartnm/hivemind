@@ -4,7 +4,7 @@
 from hivemind import _Node
 
 
-class {_node_name}Node(_Node):
+class {_node_name}(_Node):
     """
     {_node_name}Node Implementation
     """
@@ -27,7 +27,7 @@ class {_node_name}Node(_Node):
 
 if __name__ == '__main__': # pragma: no cover
     # An intialization command.
-    {_node_name}Node.exec_(
+    {_node_name}.exec_(
         name="{_node_name|low}",
         logging='verbose'
     )

@@ -215,3 +215,15 @@ class PV_SimpleRegistry(PureVirtualMeta, SimpleRegistry):
     def __init__(cls, name, bases, dct) -> None:
         PureVirtualMeta.__init__(cls, name, bases, dct)
         SimpleRegistry.__init__(cls, name, bases, dct)
+
+
+class BasicRegistry(type):
+    """
+    A metaclass that just hosts all the subclasses on the base.
+    I know the __subclasses__ is a thing but meh.
+    """
+    def __init__(cls, name, bases, dct) -> None:
+        if not hasattr(cls, '_registry'):
+            cls._registry = []
+        else:
+            cls._registry.append(cls)

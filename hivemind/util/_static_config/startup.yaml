@@ -6,9 +6,9 @@
 properties:
   start_files:
     - nodes/__init__.py
-    - config/starter.yaml
+    - config/__init__.py
+    - config/hive.py
     - root/__init__.py
-    - hive.py
 
   hive_header: |
     """
@@ -20,7 +20,7 @@ properties:
 
 
   node_import: |
-    # from .{_node_name|low} import *
+    # from .{_node_name|low} import {_node_name|low}
 
 #
 # Initialize the folder structure for our users
@@ -28,6 +28,8 @@ properties:
 init_startup_commands:
   - ':mkdir {_hive_name}'
   - ':cd {_hive_name}'
+  - ':mkdir templates'
+  - ':mkdir static'
   - for: "file in {start_files}"
     than:
       - ':write --make-dirs "" {file}'
@@ -35,8 +37,8 @@ init_startup_commands:
   # Write some initial content to these files
   - ':read {hm_util_path}/_static_config/settings_default.py dsettings'
   - ':read {hm_util_path}/_static_config/default_root.py rootinit'
-  - ':write {hive_header} hive.py'
-  - ':write -a {dsettings} hive.py'
+  - ':write {hive_header} config/hive.py'
+  - ':write -a {dsettings} config/hive.py'
   - ':write {nodes_init} nodes/__init__.py'
   - ':write {rootinit} root/__init__.py'
   - ':cd --pop'

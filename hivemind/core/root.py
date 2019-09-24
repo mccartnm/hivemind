@@ -69,6 +69,7 @@ class RootServiceHandler(_HandlerBase):
             self.write_to_response(passback)
         # return '<none>'
 
+
     def do_GET(self):
         self._set_headers()
         self.write_to_response({'result' : True})
@@ -146,7 +147,10 @@ class RootController(_HivemindAbstractObject):
         
 
     def __init__(self, **kwargs):
-        _HivemindAbstractObject.__init__(self)
+        _HivemindAbstractObject.__init__(
+            self,
+            logger=kwargs.get('logger', None)
+        )
 
         self._settings = kwargs
 
@@ -177,14 +181,19 @@ class RootController(_HivemindAbstractObject):
         self._response_queue = queue.PriorityQueue()
 
         #
+        # Startup utilities
+        #
+        self._startup_condition = kwargs.get('startup_condition', None)
+
+        #
         # Data layer interface
         #
-        database_config = {
-            'type' : 'sqlite',
-            'name' : 'hivemind'
-        }
-        database_config.update(kwargs.get('database', {}))
-        self._database = _DatabaseScafolding.start_database(database_config)
+        # database_config = {
+        #     'type' : 'sqlite',
+        #     'name' : 'hivemind'
+        # }
+        # database_config.update(kwargs.get('database', {}))
+        # self._database = _DatabaseScafolding.start_database(database_config)
 
 
     @classmethod
@@ -288,14 +297,15 @@ class RootController(_HivemindAbstractObject):
             'port' : subscription.node.port
         })
 
-    @staticmethod
-    def exec_(logging=None):
+
+    @classmethod
+    def exec_(cls, logging=None):
         """
         Generic call used by most entry scripts to start the root without
         having to create a custom local instance
         """
         log.start(logging is not None)
-        controller = RootController()
+        controller = cls()
         controller.run()
         return controller
 
@@ -327,17 +337,18 @@ class RootController(_HivemindAbstractObject):
                 ('', self.default_port), self._handler_class
             )
 
-            logging.info(f"Serving on {self.default_port}...")
+            self.log_info(f"Serving on {self.default_port}...")
 
-            # Just keep serving
+            if self._startup_condition:
+                # Alert waiting parties that we're ready
+                with self._startup_condition:
+                    self._startup_condition.notify_all()
+
+            # Just keep serving. Eventually we need to replace this
             self._server.serve_forever()
             return
 
-        except KeyboardInterrupt as err:
-            self._shutdown()
-            return
-
-        except Exception as e:
+        finally:
             self._shutdown()
             return
 
@@ -356,9 +367,9 @@ class RootController(_HivemindAbstractObject):
 
         test = self.NodeProxy(payload['name'])
         if payload['status'] != self.NODE_TERM:
-            logging.info(f"Register Node: {payload['name']}")
+            self.log_info(f"Register Node: {payload['name']}")
         else:
-            logging.info(f"Deregister Node: {payload['name']}")
+            self.log_info(f"Deregister Node: {payload['name']}")
 
         with self.lock:
             if test not in self._nodes:
@@ -430,7 +441,7 @@ class RootController(_HivemindAbstractObject):
         assert all(k in payload for k in ('node', 'name')), \
             'Service Registration payload missing "node" or "name"'
 
-        logging.info(f"Register Service: {payload['name']} to {payload['node']}")
+        self.log_info(f"Register Service: {payload['name']} to {payload['node']}")
 
         proxy = self.NodeProxy(payload['node']) # We just need the hash
 
@@ -461,7 +472,7 @@ class RootController(_HivemindAbstractObject):
 
         proxy = self.NodeProxy(payload['node'])
 
-        logging.info(
+        self.log_info(
             f"Register Subscription: {payload['node']} to {payload['filter']}"
         )
 
@@ -486,7 +497,7 @@ class RootController(_HivemindAbstractObject):
         Based on the path, we have to handle our work accordingly.
         """
         service_name = path.split('/')[-1]
-        logging.debug(f"Message from: {service_name}")
+        self.log_debug(f"Message from: {service_name}")
 
         self._response_queue.put(PrioritizedDispatch(
             payload.get('priority', 1),  # Prio (lower is higher prio!)
