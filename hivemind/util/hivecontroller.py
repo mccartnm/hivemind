@@ -65,7 +65,7 @@ class HiveController(object):
                  root: bool = True,
                  verbose: bool = False) -> None:
         """
-        Initialize a "Hive"
+        Initialize a Hive
 
         :param hive_root: The root location of a hive project
         :param nodes: list of node names that we snhould look for when starting up
@@ -94,21 +94,22 @@ class HiveController(object):
         # -- Thread control
         self._root_thread = None
         self._node_threads = []
-
-        # -- Thread control
         self._lock = threading.RLock()
         self._condition = threading.Condition(self._lock)
 
 
     def exec_(self) -> None:
         """
-        Run our processes
+        Run our nodes/controllers as requested
+        :return: None
         """
         if self._root_class:
             self.__init_root()
 
         if self._node_classes:
             self.__init_nodes()
+
+        print ('Running...')
 
         try:
             # This is obviously not good enough. We need to have a means
@@ -118,6 +119,9 @@ class HiveController(object):
                 inp = input()
                 if inp == 'q':
                     raise RuntimeError('Quit')
+
+        except KeyboardInterrupt as e:
+            pass # Ignore the printing
         finally:
             self.__kill()
 
@@ -178,6 +182,7 @@ class HiveController(object):
         new_log = logging.getLogger(name)
         new_log.addHandler(handler)
         new_log.setLevel(level)
+
         return new_log
 
 
