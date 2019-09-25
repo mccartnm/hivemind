@@ -72,6 +72,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
     Object that can communicate with other nodes via basic protocols
     after registering with the RootController anything it hosts.
     """
+    _abstract = False
 
     def __init__(self, name=None, **kwargs):
         _HivemindAbstractObject.__init__(self, **kwargs)

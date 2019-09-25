@@ -4,3 +4,4 @@ docs/build
 build
 .coverage
 coverage.xml
+*.egg-info

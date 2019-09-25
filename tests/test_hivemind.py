@@ -30,9 +30,9 @@ class HiveMindTests(unittest.TestCase):
             def services(self):
                 self._ping = self.add_service('ping', self._ping_func)
 
-            def _ping_func(self):
-                self._ping.send('test')
-                self._ping.sleep_for(1.0)
+            def _ping_func(self, service):
+                service.send('test')
+                service.sleep_for(1.0)
                 return 0
 
         class RecNode(_Node):

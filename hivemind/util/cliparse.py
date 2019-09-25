@@ -109,6 +109,8 @@ def build_hivemind_parser() -> argparse.ArgumentParser:
     :return: parser instance ready to read through args
     """
     parser = argparse.ArgumentParser(prog='hm', description=full_description)
+    parser.subparser_map = {}
+
     subparsers = parser.add_subparsers(help='Commands that can be run')
 
     def _new_subparser(*args, **kwargs) -> argparse.ArgumentParser:
@@ -124,11 +126,14 @@ def build_hivemind_parser() -> argparse.ArgumentParser:
     new_project.add_argument('name', help='The name of the new project')
     new_project.add_argument('--dir', help='The directory to place it in (cwd by default)')
     new_project.set_defaults(func=_new)
+    parser.subparser_map['new'] = new_project
+
 
     # -- Node creation
     new_node = _new_subparser('create_node', description='Generate a new node within a hive')
     new_node.add_argument('name', help='The name of this node')
     new_node.set_defaults(func=_new_node)
+    parser.subparser_map['create_node'] = new_node
 
     # -- Development Envrionment Utility
     dev_env = _new_subparser('dev', description='Start the hive to develop and test')
@@ -136,5 +141,6 @@ def build_hivemind_parser() -> argparse.ArgumentParser:
     # dev_env.add_argument('-c', '--count', nargs='+', help='The number of node instances to start')
     dev_env.add_argument('--no-root', action='store_false', help='Don\'t enable the root node (hook to existsing)')
     dev_env.set_defaults(func=_dev_env)
+    parser.subparser_map['dev'] = dev_env
 
     return parser

@@ -31,7 +31,7 @@ class _Service(_HivemindAbstractObject):
     channel
     """
     def __init__(self, node, name, function):
-        _HivemindAbstractObject.__init__(self)
+        _HivemindAbstractObject.__init__(self, logger=node._logger)
         self._node = node
         self._name = name
         self._function = function
@@ -39,6 +39,9 @@ class _Service(_HivemindAbstractObject):
         self._condition = threading.Condition(self.lock)
         self._thread = None # \see run()
         self._abort = False
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}({self._name})>'
 
     @property
     def node(self):
@@ -123,7 +126,7 @@ class _Service(_HivemindAbstractObject):
                 if self._abort:
                     break # Service is terminating
 
-            result = func() # Fire!
+            result = func(self) # Fire!
             if result > 0:
                 self.abort() # What happens here
                 break
