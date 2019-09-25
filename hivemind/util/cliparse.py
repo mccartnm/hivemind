@@ -22,6 +22,7 @@ SOFTWARE.
 
 import os
 import sys
+import uuid4
 import argparse
 
 from hivemind.util import TaskYaml, pdict, CommandParser
@@ -56,6 +57,7 @@ def _new(args: argparse.Namespace) -> int:
 
     # Startup attributes
     config.add_attribute('_hive_name', args.name)
+    config.add_attribute('_hive_key', str(uuid4.uuid4()))
 
     parser = CommandParser(config['init_startup_commands'], task_data=config)
     parser.compute()

@@ -2,6 +2,9 @@
 Simple Example
 **************
 
+.. todo::
+
+    This all needs to be reworked in favor of the `hm` cli.
 
 RootController
 ==============
