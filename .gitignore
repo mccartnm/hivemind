@@ -1,6 +1,7 @@
 *.pyc
 __pychache__
 docs/build
+docs/debug.log
 build
 .coverage
 coverage.xml
