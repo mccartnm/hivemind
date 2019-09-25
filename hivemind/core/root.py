@@ -71,8 +71,21 @@ class RootServiceHandler(_HandlerBase):
 
 
     def do_GET(self):
-        self._set_headers()
-        self.write_to_response({'result' : True})
+        if self.path == '/':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+            # TODO: We need some love here. Probably high time
+            # we look into aiohttp or something of the sort
+            self.write_to_response(
+                "<h1>Hive is Running</h1>",
+                tojson=False
+            )
+
+        else:
+            self._set_headers()
+            self.write_to_response({'result' : True})
 
 
 @dataclass(order=True)

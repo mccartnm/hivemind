@@ -79,10 +79,13 @@ class _HandlerBase(BaseHTTPRequestHandler):
 
     endpoint = '' # If you want to only handle a custom path 
 
-    def write_to_response(self, data):
-        self.wfile.write(
-            bytes(json.dumps(data, indent=4), 'utf-8')
-        )
+    def write_to_response(self, data, tojson=True):
+        if tojson:
+            self.wfile.write(
+                bytes(json.dumps(data), 'utf-8')
+            )
+        else:
+            self.wfile.write(bytes(data, 'utf-8'))
 
 
     def log_message(self, format, *args, **kwargs):
