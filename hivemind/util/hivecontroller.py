@@ -48,23 +48,30 @@ class HiveController(object):
     """
     Utility class for managing multiple threads under the hood.
 
-    This treats each controller and node in a unique thread that responds
-    in a similar pattern that having each on an individual process will
-    do.
+    This treats each controller and node in a unique thread that responds in a
+    similar pattern that having each on an individual process will do.
 
-    This is a good entry point for starting and testing nodes on the
-    network. Using multiple HiveControllers you can stand up the
-    majority of your network and leave the nodes you're looking to
-    develop on (a) separate hive controller(s)
+    This is a good entry point for starting and testing nodes on the network.
+    Using multiple HiveControllers you can stand up the majority of your network
+    and leave the nodes you're looking to develop on (a) separate hive
+    controller(s)
 
-    In a production environment, we can probably use this in a more
-    transparent fashion
+    In a production environment, we can probably use this in a more transparent
+    fashion.
     """
     def __init__(self,
                  hive_root: str,
                  nodes: list = [],
                  root: bool = True,
                  verbose: bool = False) -> None:
+        """
+        Initialize a "Hive"
+
+        :param hive_root: The root location of a hive project
+        :param nodes: list of node names that we snhould look for when starting up
+        :param root: Should we boot up the root controller?
+        :param verbose: Use verbose logging
+        """
 
         self._verbose = verbose
         self._hive_root_folder = hive_root
@@ -170,12 +177,19 @@ class HiveController(object):
 
         new_log = logging.getLogger(name)
         new_log.addHandler(handler)
+        new_log.setLevel(level)
         return new_log
 
 
     def _load_settings(self) -> None:
         """
-        Make sure we always load our settings config first
+        Load our settings config using the ``<hive_location>/config/hive.py``
+
+        .. tip::
+            Use the environment variable ``HIVE_SETTINGS`` to provide a path to
+            a python file that contains additional settings. This can be useful
+            for things like production machines with augmented settings.
+
         :return: None
         """
         source_file = os.path.join(

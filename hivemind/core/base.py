@@ -85,6 +85,11 @@ class _HandlerBase(BaseHTTPRequestHandler):
         )
 
 
+    def log_message(self, format, *args, **kwargs):
+        if hasattr(self, '_log_function'):
+            self._log_function(' '.join(args))
+
+
     @property
     def data(self):
         if hasattr(self, '_data'):

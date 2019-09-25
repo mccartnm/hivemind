@@ -144,8 +144,11 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
             # Create independently to avoid reference mixup
             self._handler_class.endpoints = {}
+            node_ = self
+            self._handler_class._log_function = \
+                lambda _, x, node_=node_: node_._log('debug', x)
 
-            for subscription in self._subscriptions:
+            for subscription in self._subscriptions:    
                 #
                 # For each subscription, we add their endpoints to
                 # our soon-to-be server

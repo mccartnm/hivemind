@@ -42,7 +42,7 @@ def main() -> int:
         parser.print_help()
         return 0
 
-    log.start(args.verbose)
+    # log.start(args.verbose)
     return args.func(args)
 
 
