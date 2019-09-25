@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 
 # Make sure we can import hivemind proper
 TEST_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -11,6 +12,9 @@ from hivemind.core import log
 
 import unittest
 from hivemind.util import global_settings
+from hivemind.util.misc import temp_dir
+from hivemind.util.hivecontroller import HiveController
+from hivemind.util.cliparse import build_hivemind_parser
 
 global_settings.set({
     'test_global_settings' : 'a value'
@@ -18,12 +22,44 @@ global_settings.set({
 
 class HiveMindTests(unittest.TestCase):
     """
-    TODO
+    Initial tests for hivemind
     """
-    def test_foo(self):
+    def test_simple_network(self):
 
-        class MyNode(_Node):
-            foo = "bar"
+        class SendNode(_Node):
+            def services(self):
+                self._ping = self.add_service('ping', self._ping_func)
+
+            def _ping_func(self):
+                self._ping.send('test')
+                self._ping.sleep_for(1.0)
+                return 0
+
+        class RecNode(_Node):
+            def subscriptions(self):
+                self._sub =self.add_subscription('ping', self._sub_func)
+
+            def _sub_func(self, payload):
+                if not isinstance(payload, str):
+                    return
+
+                global_settings.set({'__the_answer' : 42})
+
+        parser = build_hivemind_parser()
+        with temp_dir() as hive_dir:
+            string_args = ['new', 'testhive']
+            args = parser.parse_args(string_args)
+            args.func(args)
+
+            # Now move into said hive
+            os.chdir('testhive')
+
+            hive_controller = HiveController(os.getcwd(),
+                                             nodes=[SendNode, RecNode])
+
+            hive_controller.exec_(2.0)
+
+            self.assertEqual(global_settings['__the_answer'], 42)
 
 
 # ----------------------------------------------------------------------------------------------

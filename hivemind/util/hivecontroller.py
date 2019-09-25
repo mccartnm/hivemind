@@ -72,7 +72,6 @@ class HiveController(object):
         :param root: Should we boot up the root controller?
         :param verbose: Use verbose logging
         """
-
         self._verbose = verbose
         self._hive_root_folder = hive_root
         self._load_settings()
@@ -88,6 +87,8 @@ class HiveController(object):
         self._node_execution_config = {}
         if not nodes:
             self._node_classes = self.__get_all_nodes()
+        elif issubclass(nodes[0], _Node): # list[_Node subclass]
+            self._node_classes = nodes
         else:
             self._node_classes = self.__nodes_from_names(nodes)
 
@@ -98,7 +99,7 @@ class HiveController(object):
         self._condition = threading.Condition(self._lock)
 
 
-    def exec_(self) -> None:
+    def exec_(self, timeout=None) -> None:
         """
         Run our nodes/controllers as requested
         :return: None
@@ -112,14 +113,16 @@ class HiveController(object):
         print ('Running...')
 
         try:
-            # This is obviously not good enough. We need to have a means
-            # of waiting for things until the user gives some kind of signal
-            # Otherwise this will never be viable as a service
-            while True:
-                inp = input()
-                if inp == 'q':
-                    raise RuntimeError('Quit')
-
+            if timeout is not None:
+                time.sleep(timeout)
+            else: # pragma: no cover
+                # This is obviously not good enough. We need to have a means
+                # of waiting for things until the user gives some kind of signal
+                # Otherwise this will never be viable as a service
+                while True:
+                    inp = input()
+                    if inp == 'q':
+                        raise RuntimeError('Quit')
         except KeyboardInterrupt as e:
             pass # Ignore the printing
         finally:
