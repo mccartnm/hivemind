@@ -32,6 +32,10 @@ import threading
 import importlib.machinery
 import importlib.util
 
+# Temp possible hack
+policy = asyncio.get_event_loop_policy()
+policy._loop_factory = asyncio.SelectorEventLoop
+
 from hivemind import _Node
 from hivemind.util import global_settings
 from hivemind.core import log
