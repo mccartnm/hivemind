@@ -57,7 +57,7 @@ Once you have a virtual environment set up, let's grab the source
 
 .. code-block:: shell
 
-    ~$> git clone https://github.com/mccartnm/hivemind.git
+    (hm) ~$> git clone https://github.com/mccartnm/hivemind.git
 
 
 requirements.txt

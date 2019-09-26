@@ -63,6 +63,7 @@ class HiveController(object):
                  hive_root: str,
                  nodes: list = [],
                  root: bool = True,
+                 root_only: bool = False,
                  verbose: bool = False) -> None:
         """
         Initialize a Hive
@@ -72,6 +73,9 @@ class HiveController(object):
         :param root: Should we boot up the root controller?
         :param verbose: Use verbose logging
         """
+        if root_only:
+            root = True
+
         self._verbose = verbose
         self._hive_root_folder = hive_root
         self._load_settings()
@@ -84,13 +88,16 @@ class HiveController(object):
         if root:
             self._obtain_root_class()
 
-        self._node_execution_config = {}
-        if not nodes:
-            self._node_classes = self.__get_all_nodes()
-        elif issubclass(nodes[0], _Node): # list[_Node subclass]
-            self._node_classes = nodes
+        if not root_only:
+            # self._node_execution_config = {}
+            if not nodes:
+                self._node_classes = self.__get_all_nodes()
+            elif not isinstance(nodes[0], str) and issubclass(nodes[0], _Node):
+                self._node_classes = nodes
+            else:
+                self._node_classes = self.__nodes_from_names(nodes)
         else:
-            self._node_classes = self.__nodes_from_names(nodes)
+            self._node_classes = []
 
         # -- Thread control
         self._root_thread = None
@@ -110,8 +117,6 @@ class HiveController(object):
         if self._node_classes:
             self.__init_nodes()
 
-        print ('Running...')
-
         try:
             if timeout is not None:
                 time.sleep(timeout)
@@ -125,6 +130,7 @@ class HiveController(object):
                         raise RuntimeError('Quit')
         except KeyboardInterrupt as e:
             pass # Ignore the printing
+
         finally:
             self.__kill()
 

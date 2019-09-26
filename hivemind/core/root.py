@@ -30,7 +30,8 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any
 
-from http.server import ThreadingHTTPServer
+import asyncio
+from aiohttp import web
 
 from . import log
 from .base import _HivemindAbstractObject, _HandlerBase
@@ -41,51 +42,54 @@ class RootServiceHandler(_HandlerBase):
     Web handler for the services in order to route the
     data through properly.
     """
-    def do_POST(self):
-        """
-        When we POST, if we're registering data we handle that accordingly.
-
-        Otherwise we have the controller ship out the message to any listening
-        services
-        """
-        self._set_headers()
-        if self.path == '/register/node':
-            port = self.controller._register_node(self.data)
-            self.write_to_response({ 'result' : port })
-
-        elif self.path == '/register/service':
-            self.controller._register_service(self.data)
-            self.write_to_response({ 'result' : True })
-
-        elif self.path == '/register/subscription':
-            self.controller._register_subscription(self.data)
-            self.write_to_response({ 'result' : True })
-
-        elif self.path == '/core/heartbeat':
-            self.write_to_response({'result' : True})
-
-        elif self.path.startswith('/service/'):
-            passback = self.controller._delegate(self.path, self.data)
-            self.write_to_response(passback)
-        # return '<none>'
+    async def register_node(self, request):
+        """ Register a _Node """
+        data = await request.json()
+        port = self.controller._register_node(data)
+        return web.json_response({ 'result' : port })
 
 
-    def do_GET(self):
-        if self.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
+    async def register_service(self, request):
+        """ Register a _Service """
+        data = await request.json()
+        self.controller._register_service(data)
+        return web.json_response({ 'result' : True })
 
-            # TODO: We need some love here. Probably high time
-            # we look into aiohttp or something of the sort
-            self.write_to_response(
-                "<h1>Hive is Running</h1>",
-                tojson=False
-            )
 
-        else:
-            self._set_headers()
-            self.write_to_response({'result' : True})
+    async def register_subscription(self, request):
+        """ Register a _Subscription """
+        data = await request.json()
+        self.controller._register_subscription(data)
+        return web.json_response({ 'result' : True })
+
+
+    async def register_task(self, request):
+        """ Register a _Task """
+        data = await request.json()
+        task_connect = self.controller._register_task(data)
+        return web.json_response(task_connect)
+
+
+    async def heartbeat(self, request):
+        """ Basic alive test """
+        return web.json_response({'result' : True})
+
+
+    async def service_dispatch(self, request):
+        """ Dispatch service command """
+        path = request.match_info['tail']
+        data = await request.json()
+        passback = self.controller._delegate(path, data)
+        return web.json_response(passback)
+
+
+    async def task_data_dispatch(self, request):
+        # TODO
+        pass
+
+
+    async def index(self, request):
+        return web.json_response({'result' : True})
 
 
 @dataclass(order=True)
@@ -177,6 +181,9 @@ class RootController(_HivemindAbstractObject):
 
         # Requested subscriptions
         self._subscriptions = {}
+
+        # Registered tasks
+        self._tasks = {}
 
         # How we know to shut down our dispatch threads
         self._abort = False
@@ -280,7 +287,7 @@ class RootController(_HivemindAbstractObject):
 
 
     @classmethod
-    def register_service(cls, service):
+    def register_service(cls, service) -> dict:
         """
         Register a service. This is called from a _Node
 
@@ -295,7 +302,7 @@ class RootController(_HivemindAbstractObject):
 
 
     @classmethod
-    def register_subscription(cls, subscription):
+    def register_subscription(cls, subscription) -> dict:
         """
         Register a subscription. This is called from a _Node
 
@@ -308,6 +315,22 @@ class RootController(_HivemindAbstractObject):
             'filter' : subscription.filter,
             'endpoint' : subscription.endpoint,
             'port' : subscription.node.port
+        })
+
+
+    @classmethod
+    def register_task(cls, task):
+        """
+        Register a task. This is call from a _Node (specifically a TaskNode)
+
+        :param task: _Task instance that we'll be using
+        :return dict:
+        """
+        return cls._register_post('task', {
+            'node' : task.node.name,
+            'name' : task.name,
+            'endpoint' : task.endpoint,
+            'port' : task.node.port
         })
 
 
@@ -329,10 +352,42 @@ class RootController(_HivemindAbstractObject):
         Our run operation is built to handle the various incoming
         requests and respond to the required items in time.
         """
-        self._server = None
+        self._app = None
         try:
-            self._handler_class = RootServiceHandler
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            self._handler_class = RootServiceHandler()
             self._handler_class.controller = self # Reverse pointer
+
+            self._app = web.Application()
+            self._app.add_routes([
+                web.post('/register/node',
+                         self._handler_class.register_node),
+
+                web.post('/register/service',
+                         self._handler_class.register_service),
+
+                web.post('/register/subscription',
+                         self._handler_class.register_subscription),
+
+                web.post('/register/task',
+                         self._handler_class.register_task),
+
+                web.get('/heartbeat',
+                         self._handler_class.heartbeat),
+
+                web.post('/heartbeat',
+                         self._handler_class.heartbeat),
+
+                web.post('/service/{tail:.*}',
+                         self._handler_class.service_dispatch),
+
+                web.post('/',
+                         self._handler_class.index),
+                web.get('/',
+                         self._handler_class.index)
+            ])
 
             #
             # Before running our server, let's start our queue threads
@@ -346,9 +401,6 @@ class RootController(_HivemindAbstractObject):
                 res_thread.start()
                 self._response_threads.append(res_thread)
 
-            self._server = ThreadingHTTPServer(
-                ('', self.default_port), self._handler_class
-            )
 
             self.log_info(f"Serving on {self.default_port}...")
 
@@ -357,12 +409,17 @@ class RootController(_HivemindAbstractObject):
                 with self._startup_condition:
                     self._startup_condition.notify_all()
 
-            # Just keep serving. Eventually we need to replace this
-            self._server.serve_forever()
-            return
+            # Just keep serving!
+            web.run_app(self._app, port=self.default_port)
+
+        except Exception as e:
+            if not isinstance(e, KeyboardInterrupt):
+                import traceback
+                self.log_critical(traceback.format_exc())
+                print (e)
 
         finally:
-            self._shutdown()
+            asyncio.run(self._shutdown())
             return
 
     # -- Private Interface (reserved for running instance)
@@ -435,6 +492,9 @@ class RootController(_HivemindAbstractObject):
             if proxy in self._services:
                 self._services.pop(proxy)
 
+            if proxy in self._tasks:
+                self._tasks.pop(proxy)
+
             for filter_, subinfo in self._subscriptions.items():
                 to_rem = []
                 for d in subinfo:
@@ -505,6 +565,47 @@ class RootController(_HivemindAbstractObject):
         return 0
 
 
+    def _register_task(self, payload):
+        """
+        Register a task
+        """
+        assert \
+            isinstance(payload, dict), \
+            'Task Registration payload must be a dict'
+        assert \
+            all(k in payload for k in ('node', 'filter', 'endpoint', 'port')), \
+            'Task Registration payload missing "node", ' \
+            ' "filter", "port" or "endpoint"'
+
+        proxy = self.NodeProxy(payload['node'])
+
+        self.log_info(
+            f"Register Task: {payload['node']} to {payload['name']}"
+        )
+
+        task_required_data = {}
+
+        with self.lock:
+            assert proxy in self._nodes, f'Node {payload["node"]} not found'
+            known_tasks = self._tasks.setdefault(proxy, {})
+
+            assert \
+                payload['name'] not in known_tasks, \
+                f'The task {payload["name"]} already exists for {payload["node"]}'
+
+            #
+            # We have to do quite a few things here...
+            # 1. Build an endpoint for the task
+            # task_required_data['endpoint'] = 
+            # 2. Based on the task info and any parameter definitions, we hold
+            #    that until we request that action be taken
+            # 3. Cron is obviously a little different but the idea is mostly the same
+            #
+
+        return task_required_data
+
+
+
     def _delegate(self, path, payload):
         """
         Based on the path, we have to handle our work accordingly.
@@ -525,8 +626,19 @@ class RootController(_HivemindAbstractObject):
         return { 'result' : True } # For now
 
 
-    def _shutdown(self):
-        self._server.shutdown()
+
+    def _recieve_task_data(self, path, payload):
+        """
+        Based on the task information coming in, we store the information for
+        our user to digest via the web server.
+        :param path: The url path that we've entered with
+        :param payload: The payload that we're given
+        """
+        return 0
+
+
+    async def _shutdown(self):
+        await self._app.shutdown()
         with self._response_condition:
             self._abort = True
             self._response_condition.notify_all()

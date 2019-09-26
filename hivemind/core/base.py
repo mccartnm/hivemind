@@ -24,8 +24,9 @@ import json
 import logging
 import threading
 
-from http.server import BaseHTTPRequestHandler
+# from http.server import BaseHTTPRequestHandler
 
+from aiohttp import web
 
 class _HivemindAbstractObject(object):
     """
@@ -63,11 +64,13 @@ class _HivemindAbstractObject(object):
         raise NotImplementedError("Must overload run() method")
 
 
-class _HandlerBase(BaseHTTPRequestHandler):
+class _HandlerBase:
     """
     Base class for simple JSON response utilities when communicating
     with other services.
     """
+    def __init__(self) -> None:
+        pass
 
     class Error(object):
         def __init__(self, message):
@@ -79,41 +82,6 @@ class _HandlerBase(BaseHTTPRequestHandler):
 
     endpoint = '' # If you want to only handle a custom path 
 
-    def write_to_response(self, data, tojson=True):
-        if tojson:
-            self.wfile.write(
-                bytes(json.dumps(data), 'utf-8')
-            )
-        else:
-            self.wfile.write(bytes(data, 'utf-8'))
-
-
     def log_message(self, format, *args, **kwargs):
         if hasattr(self, '_log_function'):
             self._log_function(' '.join(args))
-
-
-    @property
-    def data(self):
-        if hasattr(self, '_data'):
-            return self._data
-
-        content_length = int(self.headers['Content-Length'])
-        content = self.rfile.read(content_length)
-        try:
-            self._data = json.loads(content)
-        except:
-            logging.error('Invalid data: {}'.format(content))
-            return Error('Invalid data!')
-
-        return self._data
-
-
-    def _set_headers(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-
-
-    def do_HEAD(self):
-        self._set_headers()

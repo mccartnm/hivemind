@@ -1,2 +1,3 @@
 purepy>=1.0.0
 PyYAML>=5.1.2
+aiohttp>=3.6.1

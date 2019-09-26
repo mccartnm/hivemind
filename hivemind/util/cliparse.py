@@ -98,7 +98,8 @@ def _dev_env(args: argparse.Namespace) -> int:
         os.getcwd(),
         nodes=args.node,
         verbose=args.verbose,
-        root=args.no_root
+        root=args.no_root,
+        root_only=args.root_only
     )
     hive_controller.exec_()
 
@@ -139,7 +140,8 @@ def build_hivemind_parser() -> argparse.ArgumentParser:
     dev_env = _new_subparser('dev', description='Start the hive to develop and test')
     dev_env.add_argument('-n', '--node', action='append', help='Specific nodes to run with this hive')
     # dev_env.add_argument('-c', '--count', nargs='+', help='The number of node instances to start')
-    dev_env.add_argument('--no-root', action='store_false', help='Don\'t enable the root node (hook to existsing)')
+    dev_env.add_argument('--no-root', action='store_false', help='Don\'t enable the root controller (hook to existsing)')
+    dev_env.add_argument('--root-only', action='store_true', help='Only run the root controller')
     dev_env.set_defaults(func=_dev_env)
     parser.subparser_map['dev'] = dev_env
 

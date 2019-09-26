@@ -32,6 +32,9 @@ from .root import RootController
 from .service import _Service
 from .subscription import _Subscription
 
+import asyncio
+from aiohttp import web
+
 from ..util.misc import BasicRegistry
 
 class NodeSubscriptionHandler(_HandlerBase):
@@ -40,28 +43,31 @@ class NodeSubscriptionHandler(_HandlerBase):
     to the various subscriptions we have. This is lightweight and
     rather loose to keep the flexibility at an all time high.
     """
-    def do_POST(self):
+    async def node_post(self, request):
         """
         The POST operation for a node subscription
         """
-        self._set_headers()
+        data = await request.json()
+        path = '/' + request.match_info['fullpath']
 
         if not hasattr(self, 'endpoints'):
-            return None # Nothing to do...
+            return web.json_response(None) # Nothing to do...
 
-        if isinstance(self.data, _HandlerBase.Error):
+        if isinstance(data, _HandlerBase.Error):
             # This is an errored response from our root. We need
             # to abort now
-            return None
+            return web.json_response(None) # Nothing to do...
 
         # TODO!
         # if self.path == '/shutdown':
         #     self._node.shutdown()
 
         for endpoint, subscription in self.endpoints.items():
-            if self.path == endpoint:
+            if path == endpoint:
                 # Fire op that subscription function
-                subscription.function(self.data)
+                subscription.function(data)
+
+        return web.json_response(None)
 
 
 class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
@@ -121,6 +127,9 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
         Boot up the registered services and subscriptions.
         """
         try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
             # The first thing we do is register the node with our
             # root object. It goes into a pending completion state
             # until actually online
@@ -145,6 +154,9 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
             # Create independently to avoid reference mixup
             self._handler_class.endpoints = {}
+
+            # Route our logging facilities per-node for when the handler
+            # recieves some form of log request
             node_ = self
             self._handler_class._log_function = \
                 lambda _, x, node_=node_: node_._log('debug', x)
@@ -159,6 +171,8 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
                 ] = subscription
                 RootController.register_subscription(subscription)
 
+            self.additional_registration(self._handler_class)
+
             # for data_table in self._data_tables:
 
             #     self._handler_class.endpoints[
@@ -168,6 +182,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
             RootController.enable_node(self)
             self._set_enabled()
+
             self._serve()
 
         finally:
@@ -189,6 +204,21 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
     def data_tables(self):
         """ Register and default data tables for this now """
         return
+
+
+    def additional_registration(self, handler_class) -> None:
+        """
+        This is called before we start the internal node server and after
+        initial services/subscriptions have been registered.
+        
+        Overload this to accomidate additional functionality with the
+        RootController.
+
+        :param handler_class: NodeSubscriptionHandler class
+        :return: None
+        """
+        return
+
 
     # -- Public Methods
 
@@ -269,8 +299,12 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
         functionality is required.
         """
         self.log_debug(f"Node subscription set: {self._port}")
-        server_adress = ('', self._port)
-        httpd = ThreadingHTTPServer(
-            server_adress, self._handler_class
-        )
-        httpd.serve_forever()
+
+        self._handler_instance = self._handler_class()
+        self._app = web.Application()
+
+        self._app.add_routes([
+            web.post('/{fullpath:.*}', self._handler_instance.node_post)
+        ])
+
+        web.run_app(self._app, port=self._port)
