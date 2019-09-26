@@ -6,3 +6,4 @@ build
 .coverage
 coverage.xml
 *.egg-info
+htmlcov

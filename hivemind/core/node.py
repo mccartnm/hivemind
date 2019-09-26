@@ -24,8 +24,6 @@ import uuid
 import logging
 import traceback
 
-from http.server import ThreadingHTTPServer
-
 from . import log
 from .base import _HivemindAbstractObject, _HandlerBase
 from .root import RootController
@@ -122,12 +120,13 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
     # -- Overloaded from _HivemindAbstractObject
 
-    def run(self):
+    def run(self, loop=None):
         """
         Boot up the registered services and subscriptions.
         """
         try:
-            loop = asyncio.new_event_loop()
+            if not loop:
+                loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
             # The first thing we do is register the node with our
@@ -145,6 +144,9 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
             # multiple nodes are being serviced on the same process (future).
             # This lets us generate a custom set of paths to handle at the
             # class level without compromising the original class
+            #
+            # Wth aiohttp, we may not need this any longer because we can
+            # attach endpoints to the specific instance of the handler class
             #
             self._handler_class = type(
                 f'NodeSubscriptionHandler_{self.name}',
@@ -183,7 +185,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
             RootController.enable_node(self)
             self._set_enabled()
 
-            self._serve()
+            self._serve(loop)
 
         finally:
             self.shutdown()
@@ -293,7 +295,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
                 service.alert()
 
 
-    def _serve(self):
+    def _serve(self, loop):
         """
         Here's where the main node thread starts up and runs whatever
         functionality is required.
@@ -301,10 +303,15 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
         self.log_debug(f"Node subscription set: {self._port}")
 
         self._handler_instance = self._handler_class()
-        self._app = web.Application()
+        self._app = web.Application(loop=loop)
 
         self._app.add_routes([
             web.post('/{fullpath:.*}', self._handler_instance.node_post)
         ])
 
-        web.run_app(self._app, port=self._port)
+        web.run_app(
+            self._app,
+            port=self._port,
+            handle_signals=False,
+            access_log=self.logger
+        )

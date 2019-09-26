@@ -24,8 +24,6 @@ import json
 import logging
 import threading
 
-# from http.server import BaseHTTPRequestHandler
-
 from aiohttp import web
 
 class _HivemindAbstractObject(object):
@@ -51,6 +49,11 @@ class _HivemindAbstractObject(object):
     @property
     def lock(self):
         return self._lock
+
+
+    @property
+    def logger(self):
+        return self._logger
 
 
     def _log(self, type, msg):

@@ -27,6 +27,7 @@ import argparse
 
 from hivemind.util import TaskYaml, pdict, CommandParser
 from hivemind.util.hivecontroller import HiveController
+from hivemind.core import log
 
 full_description = """Hivemind utility belt with quick access tools for
 running task nodes, starting new projects, and more.
@@ -54,6 +55,8 @@ def _new(args: argparse.Namespace) -> int:
         os.chdir(args.dir)
 
     config = _get_startup_config()
+
+    log.start(args.verbose)
 
     # Startup attributes
     config.add_attribute('_hive_name', args.name)

@@ -347,20 +347,21 @@ class RootController(_HivemindAbstractObject):
 
     # -- Overloaded
 
-    def run(self):
+    def run(self, loop=None):
         """
         Our run operation is built to handle the various incoming
         requests and respond to the required items in time.
         """
         self._app = None
         try:
-            loop = asyncio.new_event_loop()
+            if not loop:
+                loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
             self._handler_class = RootServiceHandler()
             self._handler_class.controller = self # Reverse pointer
 
-            self._app = web.Application()
+            self._app = web.Application(loop=loop)
             self._app.add_routes([
                 web.post('/register/node',
                          self._handler_class.register_node),
@@ -410,13 +411,18 @@ class RootController(_HivemindAbstractObject):
                     self._startup_condition.notify_all()
 
             # Just keep serving!
-            web.run_app(self._app, port=self.default_port)
+            web.run_app(
+                self._app,
+                port=self.default_port,
+                handle_signals=False,
+                access_log=self.logger
+            )
 
         except Exception as e:
             if not isinstance(e, KeyboardInterrupt):
                 import traceback
                 self.log_critical(traceback.format_exc())
-                print (e)
+                print (traceback.format_exc())
 
         finally:
             asyncio.run(self._shutdown())

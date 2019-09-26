@@ -32,10 +32,6 @@ import threading
 import importlib.machinery
 import importlib.util
 
-# Temp possible hack
-policy = asyncio.get_event_loop_policy()
-policy._loop_factory = asyncio.SelectorEventLoop
-
 from hivemind import _Node
 from hivemind.util import global_settings
 from hivemind.core import log
@@ -321,12 +317,15 @@ class HiveController(object):
         lvl = logging.DEBUG if self._verbose else logging.WARNING
         for node_class in self._node_classes:
 
+            loop = asyncio.new_event_loop()
+
             node_instance = node_class(node_class.__name__,
                                       logger=self.node_logger(node_class.__name__, lvl))
 
             node_thread = threading.Thread(
                 target=node_instance.run,
-                name=node_class.__name__
+                name=node_class.__name__,
+                args=(loop,)
             )
 
             node_thread.node_instance = node_instance
@@ -345,6 +344,7 @@ class HiveController(object):
         :return: None
         """
         lvl = logging.DEBUG if self._verbose else logging.WARNING
+        loop = asyncio.new_event_loop()
 
         # -- Parameters to pass to our root for easy setup
         self._root_kwargs['logger'] = self.root_logger(lvl)
@@ -354,7 +354,8 @@ class HiveController(object):
 
         self._root_thread = TerminalThread(
             target=self._root_instance.run,
-            name='root_process'
+            name='root_process',
+            args=(loop,)
         )
         self._root_thread.daemon = True
         self._root_thread.start()
