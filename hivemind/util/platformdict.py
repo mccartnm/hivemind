@@ -108,9 +108,13 @@ class PlatformAwareDict(object):
 
     def __init__(self, indict: dict = {}, platform_: str = kThisPlatform):
         self._platform = platform_
-        if not isinstance(indict, dict):
+        if not isinstance(indict, (dict, PlatformAwareDict)):
             raise TypeError('PlatformAwareDict requires a mapping!')
-        self.__d = indict
+
+        if isinstance(indict, PlatformAwareDict):
+            self.__d = indict.raw()
+        else:
+            self.__d = indict
 
 
     @property

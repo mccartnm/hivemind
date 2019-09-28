@@ -26,15 +26,19 @@ import fnmatch
 import requests
 import threading
 
+
 # -- For Queue Prio
 from dataclasses import dataclass, field
 from typing import Any
 
 import asyncio
 from aiohttp import web
+import jinja2
+import aiohttp_jinja2
 
 from . import log
 from .base import _HivemindAbstractObject, _HandlerBase
+from hivemind.util import global_settings
 
 
 class RootServiceHandler(_HandlerBase):
@@ -88,6 +92,7 @@ class RootServiceHandler(_HandlerBase):
         pass
 
 
+    
     async def index(self, request):
         return web.json_response({'result' : True})
 
@@ -362,6 +367,15 @@ class RootController(_HivemindAbstractObject):
             self._handler_class.controller = self # Reverse pointer
 
             self._app = web.Application(loop=loop)
+
+            # Setup the template engine
+            aiohttp_jinja2.setup(
+                self._app,
+                loader=jinja2.FileSystemLoader(
+                    global_settings['hive_root'] + '/static/templates'
+                )
+            )
+
             self._app.add_routes([
                 web.post('/register/node',
                          self._handler_class.register_node),
