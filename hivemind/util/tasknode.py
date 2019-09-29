@@ -23,6 +23,8 @@ SOFTWARE.
 from hivemind import _Node, RootController
 from typing import Any
 
+import aiohttp_jinja2
+
 from .platformdict import pdict
 from .taskyaml import TaskYaml
 
@@ -141,3 +143,14 @@ class TaskNode(_Node):
             return
 
         # TODO...
+
+
+    @staticmethod
+    @aiohttp_jinja2.template('tasks/tasks_index.html')
+    async def tasks_endpoint(controller, request):
+        """
+        The endpoint we use for task management.
+        :param request: aiohttp request
+        :return: web.
+        """
+        return controller.base_context()

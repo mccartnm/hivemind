@@ -29,7 +29,8 @@ init_startup_commands:
   - ':mkdir {_hive_name}'
   - ':cd {_hive_name}'
   - ':mkdir templates'
-  - ':mkdir static'
+  - ':mkdir static/templates'
+  - ':mkdir static/style'
   - for: "file in {start_files}"
     than:
       - ':write --make-dirs "" {file}'
@@ -41,6 +42,8 @@ init_startup_commands:
   - ':write -a {dsettings} config/hive.py'
   - ':write {nodes_init} nodes/__init__.py'
   - ':write {rootinit} root/__init__.py'
+  - ':copy {hm_util_path}/_jinja/* static/templates'
+  - ':copy {hm_util_path}/_style/* static/style'
   - ':cd --pop'
 
 

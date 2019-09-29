@@ -24,6 +24,7 @@ import queue
 import logging
 import fnmatch
 import requests
+import functools
 import threading
 
 
@@ -92,9 +93,14 @@ class RootServiceHandler(_HandlerBase):
         pass
 
 
-    
+    async def index_post(self, request):
+        # FIXME: Why do we need this?
+        return web.json_response({'result': True})
+
+
+    @aiohttp_jinja2.template("hive_index.html")
     async def index(self, request):
-        return web.json_response({'result' : True})
+        return self.controller.base_context()
 
 
 @dataclass(order=True)
@@ -350,6 +356,23 @@ class RootController(_HivemindAbstractObject):
         controller.run()
         return controller
 
+    # -- Virtual Interface
+
+    def additional_routes(self) -> list:
+        """
+        Overload if required. Return a list of aiohttp routes that we
+        add to the web server for consumption. The main endpoints are
+        injected already so only user specific endpoints should live
+        here. The default implementation fills in the Task endpoint.
+
+        :return: list
+        """
+        from hivemind.util.tasknode import TaskNode
+        endpoint = functools.partial(TaskNode.tasks_endpoint, self)
+        return [
+            web.get('/tasks', endpoint)
+        ]
+
     # -- Overloaded
 
     def run(self, loop=None):
@@ -399,10 +422,17 @@ class RootController(_HivemindAbstractObject):
                          self._handler_class.service_dispatch),
 
                 web.post('/',
-                         self._handler_class.index),
+                         self._handler_class.index_post),
                 web.get('/',
-                         self._handler_class.index)
+                         self._handler_class.index),
+
+                # -- For development - need a "collectstatic" eq
+                web.static('/static',
+                           global_settings['static_dirs'][0],
+                           follow_symlinks=True)
             ])
+
+            self._app.add_routes(self.additional_routes())
 
             #
             # Before running our server, let's start our queue threads
@@ -441,6 +471,16 @@ class RootController(_HivemindAbstractObject):
         finally:
             asyncio.run(self._shutdown())
             return
+
+    def base_context(self):
+        """
+        The initial context we use when rendering jinja2 templates
+        for use in the hive webfront
+        :return: dict
+        """
+        return {
+            '_hive_name' : global_settings['name']
+        }
 
     # -- Private Interface (reserved for running instance)
 
