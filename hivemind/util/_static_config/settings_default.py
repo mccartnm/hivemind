@@ -46,6 +46,12 @@ TEMPLATE_DIRS = [
 HIVE_KEY = "{_hive_key}"
 
 
+DATABASE = { # Probably multiple in the future
+    "name" : "default",
+    "type" : "sqlite"
+}
+
+
 # ---------------------------------------------------------------
 
 # --- Configuration
@@ -67,5 +73,8 @@ global_settings.set({
     'template_dirs' : TEMPLATE_DIRS,
 
     # -- Interface
-    'hive_key' : HIVE_KEY
+    'hive_key' : HIVE_KEY,
+
+    # -- Data Layer
+    'database' : DATABASE,
 })

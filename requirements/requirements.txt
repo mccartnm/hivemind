@@ -3,3 +3,4 @@ PyYAML>=5.1.2
 aiohttp>=3.6.1
 # jinja2
 aiohttp-jinja2>=1.1.2
+sqlparse>=0.3.0

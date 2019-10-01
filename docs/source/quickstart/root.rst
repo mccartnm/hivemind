@@ -11,6 +11,7 @@ A hivemind project, colloquially known as a "hive", is an organizational structu
 
     Think of a city. A bustling of people and information. When walking through the streets, you don't care about what most people or things are doing. You observe and relay information to people who are listening all while potentially listening in on others when the time is right.
 
+If you're familiar with the Django_ project, this should feel very familiar as many of the concepts were modeled after it's project structure.
 
 ``hm`` Command
 ==============
@@ -326,4 +327,4 @@ Within the node definition (``nodes/batman/batman.py``) we can set up the subscr
 
             return 0
 
-
+.. _Django: https://www.djangoproject.com/

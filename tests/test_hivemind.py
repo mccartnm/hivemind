@@ -1,5 +1,7 @@
 import os
 import sys
+import unittest
+import argparse
 import threading
 
 # Make sure we can import hivemind proper
@@ -9,8 +11,6 @@ sys.path.append(os.path.dirname(TEST_BASE_DIR))
 from hivemind import RootController, _Node
 
 from hivemind.core import log
-
-import unittest
 from hivemind.util import global_settings
 from hivemind.util.misc import temp_dir
 from hivemind.util.hivecontroller import HiveController
@@ -62,6 +62,13 @@ class HiveMindTests(unittest.TestCase):
             self.assertEqual(global_settings['__the_answer'], 42)
 
 
+
+def build_test_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--test', action='append', help='Test select directories at a time')
+    return parser
+
+
 # ----------------------------------------------------------------------------------------------
 # -- Main Function to run tests
 # ----------------------------------------------------------------------------------------------
@@ -70,12 +77,22 @@ if __name__ == "__main__":
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
-    suite.addTests(loader.loadTestsFromTestCase(HiveMindTests))
+    parser = build_test_parser()
 
-    # Test the util library
-    suite.addTests(loader.discover(
-        TEST_BASE_DIR + '/util'
-    ))
+    args, unknown = parser.parse_known_args()
+
+    if args.test:
+        for t in args.test:
+            suite.addTests(loader.discover(
+                TEST_BASE_DIR + '/' + t
+            ))
+    else:
+        suite.addTests(loader.loadTestsFromTestCase(HiveMindTests))
+
+        # Test the util library
+        suite.addTests(loader.discover(
+            TEST_BASE_DIR + '/util'
+        ))
 
     res = unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
     sys.exit(1 if not res else 0)
