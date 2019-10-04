@@ -1,17 +1,37 @@
+"""
+Copyright (c) 2019 Michael McCartney, Kevin McLoughlin
 
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
 import logging
 import threading
 
-from .base import _RobXObject
+from .base import _HivemindAbstractObject
 from .root import RootController
 
-class _Service(_RobXObject):
+class _Service(_HivemindAbstractObject):
     """
     Service object that can ship messages over a select command
     channel
     """
     def __init__(self, node, name, function):
-        _RobXObject.__init__(self)
+        _HivemindAbstractObject.__init__(self, logger=node._logger)
         self._node = node
         self._name = name
         self._function = function
@@ -19,6 +39,9 @@ class _Service(_RobXObject):
         self._condition = threading.Condition(self.lock)
         self._thread = None # \see run()
         self._abort = False
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}({self._name})>'
 
     @property
     def node(self):
@@ -103,7 +126,7 @@ class _Service(_RobXObject):
                 if self._abort:
                     break # Service is terminating
 
-            result = func() # Fire!
+            result = func(self) # Fire!
             if result > 0:
                 self.abort() # What happens here
                 break
@@ -111,7 +134,7 @@ class _Service(_RobXObject):
 
     def run(self):
         """
-        Overloaded from _RobXObject
+        Overloaded from _HivemindAbstractObject
         Begin a thread that will control the runtime of our
         service.
 

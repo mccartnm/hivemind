@@ -1,2 +1,6 @@
-# Currently we don't require anything!
-# This is more of a - in the near future - bit.
+purepy>=1.0.0
+PyYAML>=5.1.2
+aiohttp>=3.6.1
+# jinja2
+aiohttp-jinja2>=1.1.2
+sqlparse>=0.3.0

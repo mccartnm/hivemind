@@ -1,7 +1,10 @@
 Hivemind
 ========
 
-> Warning: This package is _brand_ new and I'm going through some of the initial growing pains. Hoping to have it more sustainable in the next couple of weeks. If you want to adventure with this toolkit, expect conflicts in the near future.
+Branch | Status | Coverage
+--- | --- | --
+`master` | [![Build Status](https://travis-ci.org/mccartnm/hivemind.svg?branch=master)](https://travis-ci.org/mccartnm/hivemind) | [![Code Coverage](https://codecov.io/gh/mccartnm/hivemind/branch/master/graph/badge.svg)](https://codecov.io/gh/mccartnm/hivemind)
+`dev` | [![Build Status](https://travis-ci.org/mccartnm/hivemind.svg?branch=dev)](https://travis-ci.org/mccartnm/hivemind) | [![Code Coverage](https://codecov.io/gh/mccartnm/hivemind/branch/dev/graph/badge.svg)](https://codecov.io/gh/mccartnm/hivemind)
 
 [Better, less crazy docs](https://mccartnm.github.io/hivemind-docs/index.html)
 

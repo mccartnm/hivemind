@@ -1,0 +1,7 @@
+# Requirements for developers
+
+codecov>=2.0.15
+
+-r docs.txt
+-r requirements.txt
+-e git+https://github.com/mccartnm/sphinx-execute-code.git#egg=sphinx-execute-code

@@ -1,0 +1,1 @@
+set TESTENVVAR=/foo/bar

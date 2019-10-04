@@ -57,13 +57,41 @@ Once you have a virtual environment set up, let's grab the source
 
 .. code-block:: shell
 
-    ~$> git clone https://github.com/mccartnm/hivemind.git
+    (hm) ~$> git clone https://github.com/mccartnm/hivemind.git
 
-PyPi
-====
+
+requirements.txt
+----------------
+
+With the code cloned, grab the development packages.
+
+.. code-block:: shell
+
+    (hm) ~$> cd hivemind
+    (hm) ~$> pip install -r requirements/development.txt
+    # ...
+
+That should install the required thirdparty libraries. It may take a moment to grab them all. Any time a package dependency changes, you should be able to run that same command to upgrade/install the changes.
+
+pip
+---
+
+With the code available and the developer packages at your disposal, let's install (with symlinks) to set up the CLI for us.
+
+.. code-block:: shell
+
+    (hm) ~$> pip install -e .
+
+
+.. warning::
+
+    The ``-e`` is important! Otherwise you may not see your changes reflected as you work.
+
+
+Once that's done, you should be able to run the ``hm`` command and see the help print out.
+
+
+PyPi (Non Contributers)
+========================
 
 Coming soon... (once available on pypi or at least ``setup.py``)
-
-If you're really itching to try, clone the repo_ and add it to your ``PYTHONPATH``/use ``sys.path.append`` on your scripts.
-
-.. _repo: http://github.com/mccartnm/hivemind

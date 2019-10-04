@@ -28,8 +28,13 @@ version = ''
 # The full version, including alpha/beta/rc tags
 release = ''
 
-
 # -- General configuration ---------------------------------------------------
+
+# We need to import classes for documenting them.
+import sys
+import os
+_root_path = os.path.dirname(os.path.dirname(os.path.abspath('.')))
+sys.path.insert(0, os.path.join(_root_path))
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
@@ -44,7 +49,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    # 'sphinx_execute_code',
+    'sphinx_execute_code',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -184,4 +189,4 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'https://docs.python.org/3/': None}
