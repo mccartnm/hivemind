@@ -18,12 +18,25 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+# -- Exceptions revolving around the data layer
 """
 
-# -- Import all basic fields
-from . import intfields
-from . import datefields
-from . import datafields
-from . import floatfields
-from . import textfields
-from . import relationfields
+class DatabaseError(Exception):
+    """ General database errors """
+    pass
+
+
+class IntegrityError(Exception):
+    """ Errors resulting from database constraints """
+    pass
+
+
+class OperationalError(Exception):
+    """ Errors relating to SQL syntax """
+    pass
+
+
+class MultipleResultsError(Exception):
+    """ For get operations that return too many results """
+    pass

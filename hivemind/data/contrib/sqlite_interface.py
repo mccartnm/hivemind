@@ -30,6 +30,7 @@ from purepy import override
 
 from hivemind.data.abstract.field import FieldTypes
 from hivemind.data.abstract.scafold import _DatabaseIntegration
+from hivemind.data.exceptions import DatabaseError, IntegrityError, OperationalError
 
 
 class SQLiteInterface(_DatabaseIntegration):
@@ -71,12 +72,15 @@ class SQLiteInterface(_DatabaseIntegration):
 
 
     @override()
-    def connect(self, database_name, **kwargs):
+    def connect(self, **kwargs):
         """
         Connect to a single local file
         """
-        if not database_name.endswith('.db'):
-            database_name += '.db'
+        database_name = kwargs.get('name', 'default')
+
+        if not database_name == ':memory:':
+            if not database_name.endswith('.db'):
+                database_name += '.db'
 
         self.__db = sqlite3.connect(
             database_name,
@@ -117,7 +121,14 @@ class SQLiteInterface(_DatabaseIntegration):
         # for statement in statements:
         #     print (sqlparse.format(statement, reindent=True, keyword_case='upper'))
 
-        return cursor.execute(query, values)
+        try:
+            return cursor.execute(query, values)
+        except sqlite3.IntegrityError as e:
+            raise IntegrityError(str(e))
+        except sqlite3.OperationalError as e:
+            raise OperationalError(str(e))
+        except Exception as e:
+            raise DatabaseError(str(e))
 
 
     @override()
@@ -126,6 +137,36 @@ class SQLiteInterface(_DatabaseIntegration):
         From our connection, snag a cursor
         """
         return self.__db.cursor()
+
+
+    @override()
+    def get_table_names(self):
+        result = self.execute("SELECT * FROM sqlite_master WHERE type='table'")
+        output = []
+        for row in result.fetchall():
+            output.append(row[2])
+        return output
+
+
+    def definition_sql(self, column):
+        """
+        Based on the column provided, return the SQL for building a table with
+        a 
+        """
+        dbt = self.type_from_base(column.base_type)
+        column_name = column.db_name()
+
+        if dbt == 'FK':
+            # -- Special handle for FK
+            fk_table_name = column.related_class.db_name()
+            fk_pk_column_name = column.related_class.pk()
+
+            sql, _ = super().definition_sql(column)
+
+            return sql, [f'FOREIGN KEY({column_name}) REFERENCES {fk_table_name}({fk_pk_column_name})']
+
+        # Return the default impl if nothing else matches
+        return super().definition_sql(column)
 
 
 #

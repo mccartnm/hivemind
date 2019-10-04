@@ -23,6 +23,8 @@ SOFTWARE.
 import copy
 from enum import Enum, unique, auto
 
+from hivemind.data.query import QueryOperators, QueryFilter
+
 class _AutoName(Enum):
      def _generate_next_value_(name, start, count, last_values):
          return name
@@ -95,6 +97,43 @@ class _Field(object, metaclass=FieldMeta):
         self._unique = kwargs.get('unique', False)
         self._default = kwargs.get('default', None)
         self._null = kwargs.get('null', False)
+        self._db_column = kwargs.get('db_column', None)
+
+        self._table = None # Set by the table metaclass
+
+
+    def __getattr__(self, key):
+        """
+        Here's another spot where python some some mad-hattery.
+
+        We use the field to define query filters and this is
+        one way to route throug the defaults
+        """
+        if key in QueryOperators.basic_operators and self._table:
+            return QueryFilter.factory(self._table, self, key)
+        raise AttributeError(f'_Field instance has no attribute {key}')
+
+
+    def db_layout(self) -> dict:
+        """
+        Introspection layout
+        """
+        return {
+            'base_type': self.base_type.name,
+            'pk': self.pk,
+            'unique': self._unique,
+            'has_default': self.has_default,
+            'null': self._null
+        }
+
+
+    def db_name(self) -> str:
+        if self._db_column:
+            return self._db_column
+
+        if self._table:
+            return self._table.db_column_name(self.field_name)
+        return self.field_name
 
 
     @property
@@ -123,19 +162,3 @@ class _Field(object, metaclass=FieldMeta):
         Based on the type, get the proper type from our database
         """
         return database.type_from_base(cls.base_type)
-
-
-    def definition_sql(self, db_type: str) -> str:
-        """
-        Get the definition of this field. This will have to change based
-        on the database but for now...
-        """
-        sql = db_type + \
-            (' UNIQUE' if self._unique else '') + \
-            ('' if self._null else ' NOT NULL')
-
-        if self._default and not callable(self._default):
-            sql + f' DEFAULT ({self._default})'
-
-        return sql
-

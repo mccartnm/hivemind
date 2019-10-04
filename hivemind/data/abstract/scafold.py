@@ -25,11 +25,13 @@ Abstract inteface for the database api
 import sqlparse
 from purepy import pure_virtual
 
-from .field import FieldTypes
+from .field import FieldTypes, _Field
 from .table import _TableLayout
 
-from hivemind.util.misc import PV_SimpleRegistry
+from hivemind.util.misc import PV_SimpleRegistry, cd
 from hivemind.data.db import TransactionManager
+from hivemind.data.query import Query
+
 
 class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
     """
@@ -42,6 +44,10 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
     # e.x. { FieldTypes.JSON : 'jsonb' }
     mapped_types = {}
 
+    # Overload where required to map from query filters to
+    # their respective items
+    overloaded_operators = {}
+
 
     def __init__(self):
         self.__tm = TransactionManager(self)
@@ -49,7 +55,7 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
     # -- Virtual Interface
 
     @pure_virtual
-    def connect(self, database_name, **kwargs):
+    def connect(self, **kwargs):
         """
         Connect to a given database
         """
@@ -80,6 +86,72 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
         raise NotImplementedError()
 
 
+    @pure_virtual
+    def get_table_names(self):
+        """
+        Obtain known table names
+        """
+        raise NotImplementedError()
+
+
+    def to_values(self,
+                  table: _TableLayout,
+                  sql: str,
+                  values: tuple,
+                  fields: list) -> list:
+        """
+        Given a set of fields (_Field | str), obtain all the values
+        for any rows that match our search
+        """
+        output = []
+        table_name = table.db_name()
+
+        full_field_names = []
+        fiels_names_to_zip = []
+
+        for field in fields:
+            if isinstance(field, str):
+                full_field_names.append(f'"{table_name}"."{field}"')
+                fiels_names_to_zip.append(field)
+
+            elif isinstance(field, _Field):
+                fdb_name = table.db_column_name(field)
+                full_field_names.append(f'"{table_name}"."{fdb_name}"')
+                fiels_names_to_zip.append(
+                    f"{table.__name__}.{field.field_name}"
+                )
+
+            else:
+                raise TypeError('field must be _Field or str')
+
+        full_sql = (f'SELECT {", ".join(full_field_names)} '
+                    f'FROM {table_name}')
+
+        if sql:
+            full_sql += ' WHERE ' + sql
+
+        for row in self.execute(full_sql, values):
+            output.append(dict(zip(fiels_names_to_zip, row)))
+        return output
+
+
+    def to_objects(self, table: _TableLayout, sql: str, values: tuple) -> list:
+        """
+        Given a sql statement and the values that we want to
+        apply to our query, execute the statement and construct
+        logical objects out of the results.
+        """
+        objects = []
+        full_sql = 'SELECT * FROM ' + table.db_name()
+
+        if sql:
+            full_sql += ' WHERE ' + sql
+
+        for row in self.execute(full_sql, values):
+            objects.append(table._create_from_values(self, row))
+        return objects
+
+
     # -- SQL Operations
     #    These may be overloaded at a per-integration level
 
@@ -95,10 +167,39 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
         return 'ROLLBACK' + (';' if term else '')
 
 
+    def definition_sql(self, column):
+        """
+        :return: The default SQL required to build a column. Overload this
+                 for custom fields or select relationship fields.
+        """
+        sql = f'{column.db_name()} {column.db_type(self)}' + \
+            (' PRIMARY KEY' if column._pk else '') + \
+            (' UNIQUE' if column._unique else '') + \
+            ('' if column._null else ' NOT NULL')
+
+        if column._default and not callable(column._default):
+            sql += f' DEFAULT ({column._default})'
+
+        return sql, []
+
     # -- Public Interface
+
+    @classmethod
+    def start_database(cls, database_settings):
+        database_type = database_settings.get('type')
+        if database_type not in cls._registry:
+            raise ValueError(f'The database integration: {database_type} not found.')
+
+        interface = cls._registry[database_type]()
+        interface.connect(**database_settings)
+        return interface
+
 
     @property
     def transaction(self):
+        """
+        :return: The TransactionManager that goes along with this database
+        """
         return self.__tm
 
 
@@ -126,17 +227,16 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
         # - Columns will maintain their db order
         for attr, column in cls.columns():
             if attr in kwargs:
-                values.append(kwargs[attr])
-                values[-1] = column.prep_for_db(values[-1])
+                values.append(column.prep_for_db(kwargs[attr]))
             elif column.has_default:
-                values.append(column.generate_default())
-                values[-1] = column.prep_for_db(values[-1])
+                values.append(column.prep_for_db(column.generate_default()))
             else:
                 values.append(None)
 
             if column.pk:
                 pk_column = attr
-                id_ = values[-1] # Breaks with auto incr! What should we do?
+                # Breaks with db auto incr! What should we do?
+                id_ = values[-1]
 
         sql = f'INSERT INTO {cls.db_name()} VALUES ('
         for i, v in enumerate(values):
@@ -144,49 +244,66 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
         sql += ');'
         self.execute(sql, values=values)
 
-        return self.query_for_one(cls, **{ pk_column : id_ })
+        # -- We need better error handling
+        return self.new_query(
+            cls, getattr(cls, pk_column).equals(id_)
+        ).objects()[0]
 
 
-    def query_for_one(self, cls, **kwargs):
+    def delete(self, instance):
         """
-        Query for a single item
-        :param cls: The _TableLayout that we're searching for
-        :return: _TableLayout instance
+        Destroy an item in the database
+        :param instance: The item to remove
         """
-        return self.query(cls, **kwargs)[0]
+        table_name = instance.db_name()
+        pk_column = instance.pk()
+        pk_field = instance.pk_field()
+
+        sql = f'DELETE FROM "{table_name}" WHERE "{pk_column}" = ?'
+        self.execute(sql, values=(instance.pk_value,))
 
 
-    def query(self, cls, **kwargs):
+    def save(self, instance):
         """
-        Query for an object. We'll be making great strides to improve this
-        but let's start with something simple.
+        Based on the changes to the instance, we save the respective values.
         """
+        table_name = instance.db_name()
+        pk_column = instance.pk()
+        pk_field = instance.pk_field()
+
+        db_instance = self.new_query(
+            instance.__class__,
+            **{pk_field.field_name : instance.pk_value}
+        ).get()
+
+        fields_to_update = []
         values = []
-        sql = f'SELECT * FROM {cls.db_name()}'
+        for attr, column in instance.columns():
+            db_value = getattr(db_instance, attr)
+            this_value = getattr(instance, attr)
 
-        filters = []
-        for key, value in kwargs.items():
-            filters.append(cls.db_column_name(key) + ' = ?')
-            values.append(value)
+            if db_value != this_value:
+                fields_to_update.append(f'"{column.db_name()}" = ?')
+                values.append(column.prep_for_db(this_value))
 
-        if filters:
-            sql += ' WHERE (' + ' AND '.join(filters) + ')'
-        sql += ';'
+        set_sql = ', '.join(fields_to_update)
+        values.append(instance.pk_value)
 
-        output = []
-        for row in self.execute(sql, tuple(values)).fetchall():
-            output.append(cls._create_from_values(row))
-        return output
+        sql = f'UPDATE "{table_name}" SET {set_sql} WHERE "{pk_column}" = ?'
+        self.execute(sql, values=tuple(values))
+
+
+    def new_query(self, cls: _TableLayout, *filters, **eq_filters) -> Query:
+        """
+        Start a new Query on a given class
+        :param cls: _TableLayout that we're looking to query
+        """
+        return Query(cls,
+                     filters=filters,
+                     database=self,
+                     **eq_filters)
 
     # -- Private Interface
-
-    def _init_database(self):
-        """
-        
-        """
-        self._create_table(MigrationTable)
-        self._create_table(DataStoreTable)
-
 
     def _create_table(self, table_layout: _TableLayout) -> None:
         """
@@ -198,17 +315,27 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
         sql = f'CREATE TABLE {table_layout.db_name()} ('
 
         columns = table_layout.columns()
+        column_sql = []
+        all_constraints = []
         for i, column in enumerate(columns):
 
-            attribute_name, column = column
-            cname = table_layout.db_column_name(attribute_name)
-            dbt = column.db_type(self)
+            attr, column = column
 
-            sql += f'  "{cname}" ' + column.definition_sql(dbt)
-            if i + 1 != len(columns):
-                sql += ', '
+            col_sql, constraints = self.definition_sql(column)
+            column_sql.append(col_sql)
+            all_constraints.extend(constraints)
+
+        sql += ', '.join(column_sql)
+
+        if all_constraints:
+            sql += ', ' + ', '.join(all_constraints)
 
         sql += ')'
 
-        # with self.__tm: # Tables cannot be created in a transaction
+        # import sqlparse
+        # statements = sqlparse.split(sql)
+        # print ('-- sql')
+        # for statement in statements:
+        #     print (sqlparse.format(statement, reindent=True, keyword_case='upper'))
+
         self.execute(sql)

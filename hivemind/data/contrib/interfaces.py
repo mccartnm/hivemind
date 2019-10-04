@@ -18,12 +18,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+# --
+Where we import any of our interfaces
 """
 
-# -- Import all basic fields
-from . import intfields
-from . import datefields
-from . import datafields
-from . import floatfields
-from . import textfields
-from . import relationfields
+from . import sqlite_interface

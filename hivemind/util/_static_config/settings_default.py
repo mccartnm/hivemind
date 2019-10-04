@@ -47,10 +47,12 @@ HIVE_KEY = "{_hive_key}"
 
 
 DATABASE = { # Probably multiple in the future
-    "name" : "default",
-    "type" : "sqlite"
+    "name" : ":memory:",
+    "type" : "sqlite",
+    "location" : HIVE_ROOT # ??
 }
 
+HIVE_DEFAULT_PORT = 9467
 
 # ---------------------------------------------------------------
 
@@ -62,6 +64,7 @@ global_settings.set({
     'name' : HIVE_NAME,
     'hive_root' : HIVE_ROOT,
     'hive_controller' : (HIVE_CONTROLLER_LOCATION, HIVE_CONTROLLER_CLASS),
+    'default_port' : HIVE_DEFAULT_PORT,
 
     # -- Logging
     'log_location' : LOG_LOCATION,

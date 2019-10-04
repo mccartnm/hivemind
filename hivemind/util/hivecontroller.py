@@ -369,7 +369,7 @@ class HiveController(object):
         """
         Terminate all nodes and then the root process.
 
-        "May death find your quickly"
+        "May death find your quickly..."
             - Faramir, Lord of the Rings - The Return of the King
 
         :return: None

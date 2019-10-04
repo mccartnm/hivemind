@@ -41,11 +41,21 @@ from . import log
 from .base import _HivemindAbstractObject, _HandlerBase
 from hivemind.util import global_settings
 
+from hivemind.data.abstract.scafold import _DatabaseIntegration
+
+# -- Bsaeic tables required by the system
+from hivemind.data.tables import TableDefinition, RequiredTables, NodeRegister
+
+# -- Populate known database mappings
+from hivemind.data.contrib import interfaces
+
 
 class RootServiceHandler(_HandlerBase):
     """
     Web handler for the services in order to route the
     data through properly.
+
+    # TODO: Move this away from here
     """
     async def register_node(self, request):
         """ Register a _Node """
@@ -119,7 +129,6 @@ class RootController(_HivemindAbstractObject):
     """
     Basic impl of subscription service handler
     """
-    default_port = 9476
 
     #
     # The node states that determine how we handle them.
@@ -127,28 +136,6 @@ class RootController(_HivemindAbstractObject):
     NODE_PENDING = 'pending'
     NODE_ONLINE  = 'online'
     NODE_TERM    = 'terminate'
-
-
-    class NodeProxy(object):
-        """
-        Proxy object that contains the status of a given node as well as
-        the port it resides on. This provides us the port location of a
-        node for URL building as well. In the long run, we can probably
-        look into also including the IP for cross machine processes
-        """
-        def __init__(self, name, status=None, port=None):
-            self._name = name
-            self._status = status
-            self._port = port
-
-
-        def __eq__(self, other):
-            return self._name == other._name
-
-
-        def __hash__(self):
-            return hash(self._name)
-
 
     class SubscriptionInfo(object):
         """
@@ -185,7 +172,7 @@ class RootController(_HivemindAbstractObject):
         self._port_count = 0
 
         # Known nodes out in the ecosystem
-        self._nodes = set()
+        # self._nodes = set()
 
         # Known services actively running
         self._services = {}
@@ -216,15 +203,10 @@ class RootController(_HivemindAbstractObject):
         #
         self._startup_condition = kwargs.get('startup_condition', None)
 
-        #
-        # Data layer interface
-        #
-        # database_config = {
-        #     'type' : 'sqlite',
-        #     'name' : 'hivemind'
-        # }
-        # database_config.update(kwargs.get('database', {}))
-        # self._database = _DatabaseScafolding.start_database(database_config)
+        # We don't start the database until we're within the run() command
+        # to make sure all database interactions with this object happen
+        # on the same node.
+        self._database = None
 
 
     @classmethod
@@ -241,8 +223,9 @@ class RootController(_HivemindAbstractObject):
             'priority' : 1 # TODO
         }
 
+        default_port = global_settings['default_port']
         result = requests.post(
-            f'http://127.0.0.1:{cls.default_port}/service/{service.name}',
+            f'http://127.0.0.1:{default_port}/service/{service.name}',
             json=json_data
         )
         result.raise_for_status()
@@ -254,8 +237,9 @@ class RootController(_HivemindAbstractObject):
         """
         Utility for running a POST at the controller service
         """
+        default_port = global_settings['default_port']
         result = requests.post(
-            f'http://127.0.0.1:{cls.default_port}/register/{type_}',
+            f'http://127.0.0.1:{default_port}/register/{type_}',
             json=json_data
         )
         result.raise_for_status()
@@ -386,6 +370,11 @@ class RootController(_HivemindAbstractObject):
                 loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
+            #
+            # Data layer interface
+            #
+            self._init_database()
+
             self._handler_class = RootServiceHandler()
             self._handler_class.controller = self # Reverse pointer
 
@@ -447,7 +436,8 @@ class RootController(_HivemindAbstractObject):
                 self._response_threads.append(res_thread)
 
 
-            self.log_info(f"Serving on {self.default_port}...")
+            default_port = global_settings['default_port']
+            self.log_info(f"Serving on {default_port}...")
 
             if self._startup_condition:
                 # Alert waiting parties that we're ready
@@ -457,7 +447,7 @@ class RootController(_HivemindAbstractObject):
             # Just keep serving!
             web.run_app(
                 self._app,
-                port=self.default_port,
+                port=default_port,
                 handle_signals=False,
                 access_log=self.logger
             )
@@ -470,6 +460,12 @@ class RootController(_HivemindAbstractObject):
 
         finally:
             asyncio.run(self._shutdown())
+
+            if self._startup_condition:
+                # Make sure we clean up if something went wrong too
+                with self._startup_condition:
+                    self._startup_condition.notify_all()
+
             return
 
     def base_context(self):
@@ -484,6 +480,26 @@ class RootController(_HivemindAbstractObject):
 
     # -- Private Interface (reserved for running instance)
 
+    def _node_exists(self, name):
+        """
+        Check the database for the node
+        """
+        query = self._database.new_query(
+            NodeRegister, NodeRegister.name.equals(name)
+        )
+        return (query.count() > 0)
+
+
+    def _get_node(self, name: str) -> (None, NodeRegister):
+        """
+        Aquire a node if it exists. Otherwise return None
+        :param name: The name of the node to search for
+        :return: NodeRegister|None
+        """
+        return self._database.new_query(
+            NodeRegister, name=name
+        ).get_or_null()
+
     def _register_node(self, payload):
         """
         Register a node with our setup
@@ -495,14 +511,15 @@ class RootController(_HivemindAbstractObject):
             all(k in payload for k in ('name', 'status')), \
             'Registration payload missing name or status'
 
-        test = self.NodeProxy(payload['name'])
         if payload['status'] != self.NODE_TERM:
             self.log_info(f"Register Node: {payload['name']}")
         else:
             self.log_info(f"Deregister Node: {payload['name']}")
 
+        node = self._get_node(payload['name'])
+
         with self.lock:
-            if test not in self._nodes:
+            if not node:
 
                 if payload['status'] == self.NODE_TERM:
                     # We're removing the node. Shouldn't be
@@ -510,14 +527,13 @@ class RootController(_HivemindAbstractObject):
                     return 0
 
                 self._port_count += 1
-                port = self.default_port + self._port_count
-                proxy = self.NodeProxy(
+                port = global_settings['default_port'] + self._port_count
+                self._database.create(
+                    NodeRegister,
                     name=payload['name'],
                     status=payload['status'],
                     port=port
                 )
-
-                self._nodes.add(proxy)
                 return port
 
             else:
@@ -525,43 +541,38 @@ class RootController(_HivemindAbstractObject):
 
                 # We've seen this node before (at least - we should
                 # have)
-                for proxy in self._nodes:
-                    if proxy._name == payload['name']:
-
-                        if payload['status'] == self.NODE_TERM:
-                            # Clean up this node
-                            destroy = proxy
-                            break
-
-                        proxy._status = payload['status']
-                        return proxy._port
-
-                if destroy:
-                    self._remove_node(destroy)
+                if payload['status'] == self.NODE_TERM:
+                    # Clean up this node
+                    self._remove_node(node)
                     return 0
+                else:
+                    node.status = payload['status']
+                    self._database.save(node)
+                    return node.port
 
 
-    def _remove_node(self, proxy):
+    def _remove_node(self, node_instance: NodeRegister) -> None:
         """
         Terminate all connections with a node. Because we base everything
         off the proxy, this becomes doable without too much headache.
         """
         with self.lock: # reentrant
-            self._nodes.remove(proxy)
 
-            if proxy in self._services:
-                self._services.pop(proxy)
+            if node_instance in self._services:
+                self._services.pop(node_instance)
 
-            if proxy in self._tasks:
-                self._tasks.pop(proxy)
+            if node_instance in self._tasks:
+                self._tasks.pop(node_instance)
 
             for filter_, subinfo in self._subscriptions.items():
                 to_rem = []
                 for d in subinfo:
-                    if d.proxy == proxy:
+                    if d.proxy == node_instance:
                         to_rem.append(d)
                 for d in to_rem:
                     subinfo.remove(d)
+
+            self._database.delete(node_instance)
 
 
     def _register_service(self, payload):
@@ -576,16 +587,16 @@ class RootController(_HivemindAbstractObject):
 
         self.log_info(f"Register Service: {payload['name']} to {payload['node']}")
 
-        proxy = self.NodeProxy(payload['node']) # We just need the hash
+        node = self._get_node(payload['node'])
+        assert node, f'Node {payload["node"]} not found'
 
         with self.lock:
-
-            assert proxy in self._nodes, f'Node {payload["node"]} not found'
-            known_services = self._services.setdefault(proxy, {})
+            known_services = self._services.setdefault(node, {})
 
             assert \
                 payload['name'] not in known_services, \
                 f'The service {payload["name"]} already exists for {payload["node"]}'
+
             known_services[payload['name']] = payload
 
         return 0
@@ -603,14 +614,15 @@ class RootController(_HivemindAbstractObject):
             'Subscription Registration payload missing "node", ' \
             ' "filter", "port" or "endpoint"'
 
-        proxy = self.NodeProxy(payload['node'])
+        node = self._get_node(payload['node'])
+        assert node, f'Node {payload["node"]} not found'
 
         self.log_info(
             f"Register Subscription: {payload['node']} to {payload['filter']}"
         )
 
         with self.lock:
-            assert proxy in self._nodes, f'Node {payload["node"]} not found'
+
             known_subscriptions = self._subscriptions.setdefault(
                 payload['filter'], []
             )
@@ -618,7 +630,7 @@ class RootController(_HivemindAbstractObject):
                 self.SubscriptionInfo(
                     payload['endpoint'],
                     payload['port'],
-                    proxy
+                    node
                 )
             )
 
@@ -637,7 +649,8 @@ class RootController(_HivemindAbstractObject):
             'Task Registration payload missing "node", ' \
             ' "filter", "port" or "endpoint"'
 
-        proxy = self.NodeProxy(payload['node'])
+        node = self._get_node(payload['node'])
+        assert node, f'Node {payload["node"]} not found'
 
         self.log_info(
             f"Register Task: {payload['node']} to {payload['name']}"
@@ -646,7 +659,6 @@ class RootController(_HivemindAbstractObject):
         task_required_data = {}
 
         with self.lock:
-            assert proxy in self._nodes, f'Node {payload["node"]} not found'
             known_tasks = self._tasks.setdefault(proxy, {})
 
             assert \
@@ -698,10 +710,12 @@ class RootController(_HivemindAbstractObject):
 
 
     async def _shutdown(self):
-        await self._app.shutdown()
+        if self._app:
+            await self._app.shutdown()
         with self._response_condition:
             self._abort = True
             self._response_condition.notify_all()
+        self._database.disconnect()
 
 
     def _dispatch(self):
@@ -743,9 +757,38 @@ class RootController(_HivemindAbstractObject):
                         )
 
 
-    def _send_to_subscription(self, url, payload):
+    def _send_to_subscription(self, url, payload) -> None:
         result = requests.post(url, json=payload)
         try:
             result.raise_for_status()
         except Exception as e:
             print ("Sending to sub failed!") # FIXME
+
+
+    def _init_database(self) -> None:
+        """
+        Initialize the database and make sure we have all the right bits
+        :return: None
+        """
+        self._database = _DatabaseIntegration.start_database(
+            global_settings['database']
+        )
+
+        active_tables = self._database.get_table_names()
+
+        if TableDefinition.db_name() not in active_tables:
+            #
+            # The table definition is a rather vital table
+            # We need to make sure it's available
+            #
+            self._database._create_table(TableDefinition)
+            active_tables.append(TableDefinition.db_name())
+
+        for name, table in RequiredTables:
+
+            if name not in active_tables:
+                self._database._create_table(table)
+                TableDefinition.register_table(self._database, table)
+
+            # else:
+            #     TableDefinition.validate_table(table)

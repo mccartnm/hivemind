@@ -96,6 +96,8 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
         # Known _Subscription objects attached to this node
         self._subscriptions = []
 
+        self._registered = False
+
         self.services()
         self.subscriptions()
         self.data_tables()
@@ -135,6 +137,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
             result = RootController.register_node(self)
             if result:
                 self._port = result['result'] # TODO: Clean this up
+                self._registered = True
 
             for service in self._services:
                 RootController.register_service(service)
@@ -273,7 +276,8 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
 
     def shutdown(self):
-        RootController.deregister_node(self)
+        if self._registered:
+            RootController.deregister_node(self)
         for service in self._services:
             service.shutdown()
 

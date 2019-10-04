@@ -193,6 +193,12 @@ def temp_dir(change_dir: bool=True) -> Generator[str, None, None]:
         yield dirpath
 
 
+_comp1 = re.compile('(.)([A-Z][a-z]+)')
+_comp2 = re.compile('([a-z0-9])([A-Z])')
+def to_camel_case(name):
+    s1 = re.sub(_comp1, r'\1_\2', name)
+    return re.sub(_comp2, r'\1_\2', s1).lower()
+
 # -- Metaclasses
 
 

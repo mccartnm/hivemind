@@ -18,12 +18,37 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+# --
+Relationship fields
 """
 
-# -- Import all basic fields
-from . import intfields
-from . import datefields
-from . import datafields
-from . import floatfields
-from . import textfields
-from . import relationfields
+from hivemind.data.abstract.field import _Field, FieldTypes
+
+class ForeignKeyField(_Field):
+    """
+    A relationship between two tables.
+    """
+    base_type = FieldTypes.FK
+
+    def __init__(self, related_class, *args, **kwargs):
+        _Field.__init__(self, *args, **kwargs)
+        self._related_class = related_class
+
+
+    @property
+    def related_class(self):
+        return self._related_class
+    
+
+    def prep_for_db(self, value):
+        """
+        If we're searching with an instance of an object, we return
+        the primary key.
+        :param value: value to augment
+        :return: key of table instance or the original value
+        """
+        from hivemind.data.abstract.table import _TableLayout
+        if isinstance(value, _TableLayout):
+            return value.pk_value
+        return value

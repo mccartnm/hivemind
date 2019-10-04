@@ -19,7 +19,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import threading
+
 from collections import deque
+
+class TransactionLocal(threading.local):
+    """
+    All transactions _must_ be localized to the thread that
+    they're started on. This does so by using python's thread
+    local mechanism
+    """
+    def __init__(self):
+        self.transaction_stack = deque()
+        self.cursor = None
+
 
 class TransactionManager(object):
     """
@@ -38,14 +51,12 @@ class TransactionManager(object):
 
     def __init__(self, integration):
         self._integration = integration
-
-        self._transaction_stack = deque()
-        self._cursor = None
+        self._transaction_local = TransactionLocal()
 
 
     @property
     def active(self):
-        return self._cursor
+        return self._transaction_local.cursor
 
 
     def __enter__(self):
@@ -53,9 +64,9 @@ class TransactionManager(object):
         Start a transaction. This may vary depending on the
         use case
         """
-        self._transaction_stack.append(1)
-        if not self._cursor:
-            self._cursor = self._integration.get_db_cursor()
+        self._transaction_local.transaction_stack.append(1)
+        if not self._transaction_local.cursor:
+            self._transaction_local.cursor = self._integration.get_db_cursor()
 
         begin_sql = self._integration.begin_sql()
         self._integration.execute(begin_sql)
@@ -67,7 +78,7 @@ class TransactionManager(object):
         commit any changes, unless of course there's an
         error at which point we need to rollback completely
         """
-        self._transaction_stack.pop()
+        self._transaction_local.transaction_stack.pop()
 
         if traceback:
             rollback_sql = self._integration.rollback_sql()
@@ -76,5 +87,5 @@ class TransactionManager(object):
             commit_sql = self._integration.commit_sql()
             self._integration.execute(commit_sql)
 
-        if len(self._transaction_stack) == 0:
-            self._cursor = None # No longer need the cursor
+        if len(self._transaction_local.transaction_stack) == 0:
+            self._transaction_local.cursor = None # No longer need the cursor
