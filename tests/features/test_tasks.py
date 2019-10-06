@@ -49,3 +49,4 @@ class TestTasks(unittest.TestCase):
                                     'name': 'test_task_a',
                                     'parameters' : {}
                                 })
+            time.sleep(1.0)

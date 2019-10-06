@@ -87,11 +87,11 @@ if __name__ == "__main__":
                 TEST_BASE_DIR + '/' + t
             ))
     else:
-        suite.addTests(loader.loadTestsFromTestCase(HiveMindTests))
+        # suite.addTests(loader.loadTestsFromTestCase(HiveMindTests))
 
         # Test the util library
         suite.addTests(loader.discover(
-            TEST_BASE_DIR + '/util'
+            TEST_BASE_DIR
         ))
 
     res = unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
