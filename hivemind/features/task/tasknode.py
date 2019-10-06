@@ -19,36 +19,63 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import os
+import inspect
 
 from hivemind import _Node, RootController
 from typing import Any
 
-import aiohttp_jinja2
+from hivemind.data.tables import NodeRegister
 
-from .platformdict import pdict
-from .taskyaml import TaskYaml
-
-
-# -- Constants
-kTaskTypes = [
-    'request', #< A job set up with our controllers that can be activated
-    'cron'     #< A cron utility that runs at a given time
-]
-
+from hivemind.util.platformdict import pdict
+from hivemind.util.taskyaml import TaskYaml
+from .task import _Task, kTaskTypes
+# from .tables import TaskRegister, TaskInfo
 
 class TaskNode(_Node):
     """
     A utility node that lets us run tasks via a semi centralized
     hub (the root controller(s)) and provides simple-to-use, platform
     agnostic tools for all of it
+
+    There are two ways we can use task nodes.
+
+    - Via Subclassed Node:
+        .. code-block:: python
+
+            # In our hive nodes/sometasks/sometasks.py
+            from hivemind.features.task import TaskNode
+
+            class SomeTasks(TaskNode):
+                # -- With a class attribute
+                #    (path is relative to this one)
+                use_config = 'myconfig.yaml'
+
+    - ``hm`` command startup:
+        .. code-block:: shell
+
+            ~$> hm tasks --config myconfig.yaml
+
+    .. tip::
+
+        This is used in conjunction with the TaskFeature class to
+        provide the full interface.
+
     """
-    def __init__(self, name: str, config: (str, TaskYaml)) -> None:
-        _Node.__init__(self, name)
+    def __init__(self, name: str, config: (str, TaskYaml) = None, **kwargs) -> None:
+        _Node.__init__(self, name, **kwargs)
+
+        if config is None and hasattr(self, 'use_config'):
+            path = os.path.dirname(
+                inspect.getfile(self.__class__).replace('\\','/')
+            )
+            config = os.path.join(path, self.use_config)
 
         self._config = TaskYaml.load(config)
         self._valid = True
         self._tasks = []
 
+    # -- Node Overrides
 
     def additional_registration(self, handler_class) -> None:
         """
@@ -56,19 +83,43 @@ class TaskNode(_Node):
         :param handler_class: NodeSubscriptionHandler class
         :return: None
         """
+        self.create_tasks()
+
         for task in self._tasks:
             handler_class.endpoints[task.endpoint] = task
 
             #
             # We add an endpoint to communicate back with results of
-            # running our task.
+            # running our task. With the TaskFeature() enabled, this
+            # will build the node-side interface it's expecting
             #
-            task.set_root_endpoint_data(RootController.register_task(task))
+            result = self.register_task(task)
+            # task.set_root_data(result)
+
+
+    def on_shutdown(self):
+        """
+        Deregister any of our tasks!
+        """
+        for task in self._tasks:
+            self.deregister_task(task)
 
 
     @property
-    def valid(self):
+    def valid(self) -> bool:
         return self._valid
+
+
+    def create_tasks(self) -> None:
+        """
+        Iterate through our task descriptors in our TaskYaml and construct
+        the _Task instances that will help power them.
+        :return: None
+        """
+        for task_name, task_descriptor in self._config['tasks'].items():
+            self._tasks.append(
+                _Task(self, task_name, task_descriptor, self._config)
+            )
 
 
     def verify_config(self) -> None:
@@ -144,13 +195,34 @@ class TaskNode(_Node):
 
         # TODO...
 
+    # -- Registration functions for the node to reach the RootController
 
-    @staticmethod
-    @aiohttp_jinja2.template('tasks/tasks_index.html')
-    async def tasks_endpoint(controller, request):
+    def register_task(self, task):
         """
-        The endpoint we use for task management.
-        :param request: aiohttp request
-        :return: web.
+        Register a task within our node. This hijacks the
+        ``RootController._register_post`` because it follows the
+        same paradigm.
+
+        :param task: _Task instance that we'll be using
+        :return dict:
         """
-        return controller.base_context()
+        return RootController._register_post('task', {
+            'node' : task.node.name,
+            'name' : task.name,
+            'type' : task.type,
+            'endpoint' : task.endpoint,
+            'port' : task.node.port,
+            'status' : RootController.NODE_ONLINE
+        })
+
+
+    def deregister_task(self, task):
+        """
+        :param task: _Task instance that we'll be using
+        :return dict:
+        """
+        return RootController._register_post('task', {
+            'node': task.node.name,
+            'name': task.name,
+            'status': RootController.NODE_TERM
+        })

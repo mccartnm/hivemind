@@ -26,6 +26,7 @@ import fnmatch
 import requests
 import functools
 import threading
+import importlib
 
 
 # -- For Queue Prio
@@ -38,6 +39,7 @@ import jinja2
 import aiohttp_jinja2
 
 from . import log
+from .feature import _Feature
 from .base import _HivemindAbstractObject, _HandlerBase
 from hivemind.util import global_settings
 
@@ -45,6 +47,7 @@ from hivemind.data.abstract.scafold import _DatabaseIntegration
 
 # -- Bsaeic tables required by the system
 from hivemind.data.tables import TableDefinition, RequiredTables, NodeRegister
+
 
 # -- Populate known database mappings
 from hivemind.data.contrib import interfaces
@@ -78,12 +81,6 @@ class RootServiceHandler(_HandlerBase):
         return web.json_response({ 'result' : True })
 
 
-    async def register_task(self, request):
-        """ Register a _Task """
-        data = await request.json()
-        task_connect = self.controller._register_task(data)
-        return web.json_response(task_connect)
-
 
     async def heartbeat(self, request):
         """ Basic alive test """
@@ -96,11 +93,6 @@ class RootServiceHandler(_HandlerBase):
         data = await request.json()
         passback = self.controller._delegate(path, data)
         return web.json_response(passback)
-
-
-    async def task_data_dispatch(self, request):
-        # TODO
-        pass
 
 
     async def index_post(self, request):
@@ -122,6 +114,19 @@ class PrioritizedDispatch:
     priority: int
     name: Any=field(compare=False)
     node: Any=field(compare=False)
+    payload: Any=field(compare=False)
+
+
+@dataclass(order=True)
+class SingleDispatch:
+    """
+    Similiar to the PrioritizedDispatch, this is used to
+    queue requests but are used for non-service/subscription
+    dispatching
+    """
+    priority: int
+    node: Any=field(compare=False)
+    endpoint: str=field(compare=False)
     payload: Any=field(compare=False)
 
 
@@ -197,16 +202,34 @@ class RootController(_HivemindAbstractObject):
         self._response_lock = threading.RLock()
         self._response_condition = threading.Condition(self._response_lock)
         self._response_queue = queue.PriorityQueue()
+        self._single_dispatch_queue = queue.PriorityQueue()
 
         #
         # Startup utilities
         #
         self._startup_condition = kwargs.get('startup_condition', None)
 
+        #
         # We don't start the database until we're within the run() command
         # to make sure all database interactions with this object happen
         # on the same node.
+        #
         self._database = None
+
+        #
+        # Features are essential tools for adding customization and allowing
+        # the core to stay as lean as possible when they're not required.
+        # Because the _Feature class in on a registry system, we only need
+        # to import them to build our registry
+        #
+        # :see: hivemind.util.misc.SimpleRegistry for more
+        #
+        self._features = []
+        for feature in global_settings['hive_features']:
+            importlib.import_module(feature)
+
+        for _, feature_class in _Feature._registry.items():
+            self._features.append(feature_class(self))
 
 
     @classmethod
@@ -314,22 +337,6 @@ class RootController(_HivemindAbstractObject):
 
 
     @classmethod
-    def register_task(cls, task):
-        """
-        Register a task. This is call from a _Node (specifically a TaskNode)
-
-        :param task: _Task instance that we'll be using
-        :return dict:
-        """
-        return cls._register_post('task', {
-            'node' : task.node.name,
-            'name' : task.name,
-            'endpoint' : task.endpoint,
-            'port' : task.node.port
-        })
-
-
-    @classmethod
     def exec_(cls, logging=None):
         """
         Generic call used by most entry scripts to start the root without
@@ -340,22 +347,19 @@ class RootController(_HivemindAbstractObject):
         controller.run()
         return controller
 
+    @property
+    def database(self):
+        return self._database
+    
+
     # -- Virtual Interface
 
     def additional_routes(self) -> list:
         """
-        Overload if required. Return a list of aiohttp routes that we
-        add to the web server for consumption. The main endpoints are
-        injected already so only user specific endpoints should live
-        here. The default implementation fills in the Task endpoint.
-
-        :return: list
+        Overload for customized routes.
+        :return: list[tuple(rest_method:str, path:str, endpoint:func)]
         """
-        from hivemind.util.tasknode import TaskNode
-        endpoint = functools.partial(TaskNode.tasks_endpoint, self)
-        return [
-            web.get('/tasks', endpoint)
-        ]
+        return []
 
     # -- Overloaded
 
@@ -398,9 +402,6 @@ class RootController(_HivemindAbstractObject):
                 web.post('/register/subscription',
                          self._handler_class.register_subscription),
 
-                web.post('/register/task',
-                         self._handler_class.register_task),
-
                 web.get('/heartbeat',
                          self._handler_class.heartbeat),
 
@@ -421,7 +422,10 @@ class RootController(_HivemindAbstractObject):
                            follow_symlinks=True)
             ])
 
-            self._app.add_routes(self.additional_routes())
+            for method, path, endpoint in self.additional_routes():
+                self._app.add_routes([getattr(web, method)(path, endpoint)])
+
+            self._install_feature_enpoints(self._app)
 
             #
             # Before running our server, let's start our queue threads
@@ -478,6 +482,37 @@ class RootController(_HivemindAbstractObject):
             '_hive_name' : global_settings['name']
         }
 
+
+    def get_node(self, name: str) -> (None, NodeRegister):
+        """
+        Aquire a node if it exists. Otherwise return None
+        :param name: The name of the node to search for
+        :return: NodeRegister|None
+        """
+        return self._database.new_query(
+            NodeRegister, name=name
+        ).get_or_null()
+
+
+    def dispatch_one(self, node, endpoint, payload) -> None:
+        """
+        Queue a singluar dispatch to a node.
+
+        :return: None
+        """
+
+        self.log_debug(f"Single Dispatch: {endpoint}")
+        self._single_dispatch_queue.put(SingleDispatch(
+            payload.pop('dispatch_priority', 1),
+            node,
+            endpoint,
+            payload
+        ))
+
+        with self._response_condition:
+            self._response_condition.notify()
+
+
     # -- Private Interface (reserved for running instance)
 
     def _node_exists(self, name):
@@ -489,16 +524,6 @@ class RootController(_HivemindAbstractObject):
         )
         return (query.count() > 0)
 
-
-    def _get_node(self, name: str) -> (None, NodeRegister):
-        """
-        Aquire a node if it exists. Otherwise return None
-        :param name: The name of the node to search for
-        :return: NodeRegister|None
-        """
-        return self._database.new_query(
-            NodeRegister, name=name
-        ).get_or_null()
 
     def _register_node(self, payload):
         """
@@ -516,7 +541,7 @@ class RootController(_HivemindAbstractObject):
         else:
             self.log_info(f"Deregister Node: {payload['name']}")
 
-        node = self._get_node(payload['name'])
+        node = self.get_node(payload['name'])
 
         with self.lock:
             if not node:
@@ -587,7 +612,7 @@ class RootController(_HivemindAbstractObject):
 
         self.log_info(f"Register Service: {payload['name']} to {payload['node']}")
 
-        node = self._get_node(payload['node'])
+        node = self.get_node(payload['node'])
         assert node, f'Node {payload["node"]} not found'
 
         with self.lock:
@@ -614,7 +639,7 @@ class RootController(_HivemindAbstractObject):
             'Subscription Registration payload missing "node", ' \
             ' "filter", "port" or "endpoint"'
 
-        node = self._get_node(payload['node'])
+        node = self.get_node(payload['node'])
         assert node, f'Node {payload["node"]} not found'
 
         self.log_info(
@@ -635,47 +660,6 @@ class RootController(_HivemindAbstractObject):
             )
 
         return 0
-
-
-    def _register_task(self, payload):
-        """
-        Register a task
-        """
-        assert \
-            isinstance(payload, dict), \
-            'Task Registration payload must be a dict'
-        assert \
-            all(k in payload for k in ('node', 'filter', 'endpoint', 'port')), \
-            'Task Registration payload missing "node", ' \
-            ' "filter", "port" or "endpoint"'
-
-        node = self._get_node(payload['node'])
-        assert node, f'Node {payload["node"]} not found'
-
-        self.log_info(
-            f"Register Task: {payload['node']} to {payload['name']}"
-        )
-
-        task_required_data = {}
-
-        with self.lock:
-            known_tasks = self._tasks.setdefault(proxy, {})
-
-            assert \
-                payload['name'] not in known_tasks, \
-                f'The task {payload["name"]} already exists for {payload["node"]}'
-
-            #
-            # We have to do quite a few things here...
-            # 1. Build an endpoint for the task
-            # task_required_data['endpoint'] = 
-            # 2. Based on the task info and any parameter definitions, we hold
-            #    that until we request that action be taken
-            # 3. Cron is obviously a little different but the idea is mostly the same
-            #
-
-        return task_required_data
-
 
 
     def _delegate(self, path, payload):
@@ -726,7 +710,9 @@ class RootController(_HivemindAbstractObject):
         while True:
 
             with self._response_condition:
-                while (not self._abort) and self._response_queue.empty():
+                while (not self._abort) and (
+                    self._response_queue.empty() and self._single_dispatch_queue.empty()
+                ):
                     self._response_condition.wait()
 
             dispatch_object = None
@@ -737,32 +723,55 @@ class RootController(_HivemindAbstractObject):
                 try:
                     dispatch_object = self._response_queue.get_nowait()
                 except queue.Empty:
-                    continue # We must have missed it
+                    pass # We may just have a single dispatch to fire
 
-            if not dispatch_object:
-                continue # How??
+            if dispatch_object:
+                # We have a dispatch - locate any matching subscriptions
+                for filter_ in self._subscriptions:
+                    if fnmatch.fnmatch(dispatch_object.name, filter_):
 
-            # We have a dispatch - locate any matching subscriptions
-            for filter_ in self._subscriptions:
-                if fnmatch.fnmatch(dispatch_object.name, filter_):
+                        #
+                        # We have a match - now it's time to ship this
+                        # payload to the subscriptions undernearth
+                        #
+                        for si in self._subscriptions[filter_]:
+                            url = f'http://127.0.0.1:{si.port}{si.endpoint}'
+                            self._ship(
+                                url, dispatch_object.payload
+                            )
+            else:
+                # Check if we have single dispatch commands to run
+                single_dispatch = None
+                with self._response_lock:
+                    if self._abort:
+                        break
 
-                    #
-                    # We have a match - now it's time to ship this
-                    # payload to the subscriptions undernearth
-                    #
-                    for si in self._subscriptions[filter_]:
-                        url = f'http://127.0.0.1:{si.port}{si.endpoint}'
-                        self._send_to_subscription(
-                            url, dispatch_object.payload
-                        )
+                    try:
+                        single_dispatch = self._single_dispatch_queue.get_nowait()
+                    except queue.Empty:
+                        continue # No worries.
+
+                if not single_dispatch: # pragma: no cover
+                    continue # Shouldn't be possible
+
+                node = single_dispatch.node
+                path = single_dispatch.endpoint
+                self._ship(
+                    f'http://127.0.0.1:{node.port}{path}',
+                    single_dispatch.payload
+                )
 
 
-    def _send_to_subscription(self, url, payload) -> None:
+    def _ship(self, url, payload) -> None:
+        """
+        Do a basic POST operation
+        """
         result = requests.post(url, json=payload)
         try:
             result.raise_for_status()
         except Exception as e:
-            print ("Sending to sub failed!") # FIXME
+            self.log_error(f"POST to {url} failed!")
+            self.log_error("  `-> " + str(e)) # ??
 
 
     def _init_database(self) -> None:
@@ -791,4 +800,29 @@ class RootController(_HivemindAbstractObject):
                 TableDefinition.register_table(self._database, table)
 
             # else:
+            #     TODO
             #     TableDefinition.validate_table(table)
+
+        #
+        # Build any feature requested tables
+        #
+        for feature in self._features:
+            for table in feature.tables():
+                if table.db_name() not in active_tables:
+                    self._database._create_table(table)
+
+
+    def _install_feature_enpoints(self, app: web.Application) -> None:
+        """
+        Various components can be (en|dis)abled and, when they
+        are active, we add them here.
+
+        :param app: The aiohttp web application that we're adding
+                    routes to
+        :return: None
+        """
+        for feature_inst in self._features:
+            for method, path, endpoint in feature_inst.endpoints():
+                self._app.add_routes(
+                    [getattr(web, method)(path, endpoint)]
+                )

@@ -114,6 +114,12 @@ class _Field(object, metaclass=FieldMeta):
         raise AttributeError(f'_Field instance has no attribute {key}')
 
 
+    def default_for_sql(self):
+        if isinstance(self._default, str):
+            return f"'{self._default}'"
+        return self._default
+
+
     def db_layout(self) -> dict:
         """
         Introspection layout

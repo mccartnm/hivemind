@@ -54,6 +54,11 @@ DATABASE = { # Probably multiple in the future
 
 HIVE_DEFAULT_PORT = 9467
 
+# -- Enabled Features
+HIVE_FEATURES = [
+    'hivemind.features.task' #< Callable task and cron library
+]
+
 # ---------------------------------------------------------------
 
 # --- Configuration
@@ -80,4 +85,7 @@ global_settings.set({
 
     # -- Data Layer
     'database' : DATABASE,
+
+    # -- Additional Features
+    'hive_features' : HIVE_FEATURES
 })

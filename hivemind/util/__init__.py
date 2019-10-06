@@ -47,6 +47,15 @@ class _GlobalSettings(object):
         return self.__d.get(key, default)
 
 
+    def feature_enabled(self, feature: str) -> None:
+        """
+        Check if a select feature has been enabled by the hive
+        :param feature: The name of the feature
+        :return: bool
+        """
+        return feature in self['hive_features']
+
+
     def __setitem__(self, key, value) -> None:
         self.__d[key] = value
 

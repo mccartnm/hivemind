@@ -20,46 +20,40 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-
 from hivemind.data.abstract.table import _TableLayout
 from hivemind.data.abstract.field import _Field
+from hivemind.data.tables import NodeRegister
 
+class TaskRegister(_TableLayout):
+    """
+    Task table with the required fields to help the user work
+    with their task nodes.
+    """
+    node = _Field.ForeignKeyField(NodeRegister)
 
-class TableDefinition(_TableLayout):
-    """
-    Table describing the migrations that we've gone through for our
-    tables.
-    """
-    table_name = _Field.TextField()
-    table_layout = _Field.JSONField()
+    # -- The name of this task
+    name = _Field.TextField()
+
+    # -- The current state of the task
+    state = _Field.TextField(default='pending')
+
+    # -- The endpoint that we use to construct
+    #    requests for the task
+    endpoint = _Field.TextField()
+
+    # -- The type of this task
+    type = _Field.TextField()
+
 
     @classmethod
-    def register_table(cls, interface, table: _TableLayout) -> None:
-        """
-        Based on the layout of the table, we have to convert everything
-        to json
-        """
-        interface.create(TableDefinition,
-                         table_name=table.db_name(),
-                         table_layout=table.db_layout())
+    def unqiue_constraints(cls):
+        return (('node', 'name'),)
 
 
-class NodeRegister(_TableLayout):
+class TaskInfo(_TableLayout):
     """
-    Table to identify nodes
+    Task info based on a single run of a given job...
     """
-    name = _Field.TextField(unique=True)
-    status = _Field.TextField()
-    port = _Field.IntField()
+    task = _Field.ForeignKeyField(TaskRegister)
 
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __hash__(self):
-        return hash(self.name)
-
-
-RequiredTables = [
-    [TableDefinition.db_name(), TableDefinition],
-    [NodeRegister.db_name(), NodeRegister]
-]
+    info = _Field.JSONField(null=True)

@@ -200,6 +200,12 @@ class TestDatabaseBasics(unittest.TestCase):
         self.assertEqual(count_query.count(), 4)
         self.assertEqual(count_query.average('numba'), 2.5)
 
+        test_bitwise = base_query.filter(
+            MyTable.foo.startswith('b') | MyTable.foo.equals('floog')
+        )
+
+        self.assertEqual(count_query.sql(), test_bitwise.sql())
+
         # Ha! This works
         objs = count_query.objects()
         self.assertEqual(len(objs), 4)
@@ -305,3 +311,65 @@ class TestDatabaseBasics(unittest.TestCase):
         self.assertEqual(query.get().foo, None)
 
         self.assertEqual(query.get().test, test_instance)
+
+
+    @_sqlite_db_wrap
+    def test_get_or_create(self, interface):
+        """
+        The get_or_create method is very useful for assuring items exist
+        """
+        interface._create_table(TestTable)
+
+        inst, created = interface.get_or_create(
+            TestTable,
+            foo = 1,
+            bar = 2
+        )
+
+        self.assertTrue(created)
+        self.assertTrue(isinstance(inst, TestTable))
+
+        _, created = interface.get_or_create(
+            TestTable,
+            foo = 1,
+            bar = 2
+        )
+
+        self.assertFalse(created)
+
+
+    @_sqlite_db_wrap
+    def test_unqiue_contraints(self, interface):
+        """
+        Multiple keys having a unique constraint
+        """
+        class UniqueTogether(_TableLayout):
+            foo = _Field.IntField()
+            bar = _Field.IntField()
+
+            @classmethod
+            def unqiue_constraints(cls):
+                return (('foo', 'bar'),)
+
+        interface._create_table(UniqueTogether)
+
+        inst1 = interface.create(
+            UniqueTogether,
+            foo = 1,
+            bar = 2
+        )
+
+        # This should be fine
+        interface.create(
+            UniqueTogether,
+            foo = 1,
+            bar = 3   # Different
+        )
+
+        with self.assertRaises(IntegrityError):
+            interface.create(
+                UniqueTogether,
+                foo = 1,
+                bar = 2
+            )
+

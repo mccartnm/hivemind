@@ -31,6 +31,7 @@ import logging.handlers
 import threading
 import importlib.machinery
 import importlib.util
+from contextlib import contextmanager
 
 from hivemind import _Node
 from hivemind.util import global_settings
@@ -106,7 +107,32 @@ class HiveController(object):
         self._condition = threading.Condition(self._lock)
 
 
-    def exec_(self, timeout=None) -> None:
+    @property
+    def settings(self):
+        return global_settings
+
+
+    @contextmanager
+    def async_exec_(self):
+        """
+        Used mainly for testing, this is a context manager that will
+        start the network and hold onto it while you can use code to
+        manipulate it.
+
+        .. code-block:: python
+
+            hive = HiveController(...)
+            with hive.async_exec_():
+                # The network is running, do something with it!
+                # ...
+
+        """
+        self.exec_(async_=True)
+        yield
+        self.__kill()
+
+
+    def exec_(self, timeout=None, async_=False) -> None:
         """
         Run our nodes/controllers as requested
         :return: None
@@ -117,22 +143,23 @@ class HiveController(object):
         if self._node_classes:
             self.__init_nodes()
 
-        try:
-            if timeout is not None:
-                time.sleep(timeout)
-            else: # pragma: no cover
-                # This is obviously not good enough. We need to have a means
-                # of waiting for things until the user gives some kind of signal
-                # Otherwise this will never be viable as a service
-                while True:
-                    inp = input()
-                    if inp == 'q':
-                        raise RuntimeError('Quit')
-        except KeyboardInterrupt as e:
-            pass # Ignore the printing
+        if not async_:
+            try:
+                if timeout is not None:
+                    time.sleep(timeout)
+                else: # pragma: no cover
+                    # This is obviously not good enough. We need to have a means
+                    # of waiting for things until the user gives some kind of signal
+                    # Otherwise this will never be viable as a service
+                    while True:
+                        inp = input()
+                        if inp == 'q':
+                            raise RuntimeError('Quit')
+            except KeyboardInterrupt as e:
+                pass # Ignore the printing
 
-        finally:
-            self.__kill()
+            finally:
+                self.__kill()
 
 
     def node_logger(self, node_name: str, level: int) -> logging.Logger:

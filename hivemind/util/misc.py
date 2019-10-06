@@ -204,7 +204,44 @@ def to_camel_case(name):
 
 class SimpleRegistry(type):
     """
-    A metaclass that builds a registry automatically
+    A metaclass that builds a registry automatically.
+
+    A quick synopsis:
+
+    In python, when a class is registered with the interpreter,
+    it builds a "type" of the class.
+
+    So, if a class is defined with this metaclass like so:
+
+    .. code-block:: python
+
+        class MyClass(object, metaclass=SimpleRegistry):
+
+            def __init__(self):
+                # ...
+
+    Whenever we load this class into memory (e.g. we've imported
+    this module from somewhere else) than an instance of this
+    metaclass (or "type") is created for it.
+
+    This is where we get the arguments making their way to the
+    __init__ function below.
+
+    - ``cls``: Is the class we've defined. In this case
+               ``MyClass``
+    - ``name``: The name of the class itself (``"MyClass"``)
+    - ``bases``: The base classes of this object (``object``)
+    - ``dct``: The dictionary of values this class will have
+               assigned to it.
+
+    Because ``MyClass`` is the first class in it's object
+    hierarchy to have the ``SimpleRegistry`` metaclass, than
+    it doesn't have the ``_registry`` attribute assigned to it.
+
+    We assign the dictionary so subsequent classes will see that
+    attribute as they are defined and fill it out. Because python,
+    it's all the same dictionary object and we get ourselves a
+    tidy alias utility for defined subclasses of any given base.
     """
     def __init__(cls, name, bases, dct) -> None:
         if not hasattr(cls, '_registry'):

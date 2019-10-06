@@ -74,9 +74,13 @@ class _QueryFilterGroup(_QueryItemBase):
     """
     op = None
 
-    def __init__(self, *filters):
+    def __init__(self, *filters, **eq_filters):
         _QueryItemBase.__init__(self)
         self._filters = filters
+
+        for field_name, value in eq_filters.items():
+            field = self._cls.get_field(field_name)
+            self._filters.append(field.equals(value))        
 
 
     @override()
@@ -118,6 +122,14 @@ class QueryFilter(_QueryItemBase):
         self._field = field
         self._operator = operator
         self._value = value
+
+
+    def __and__(self, other):
+        return QueryAnd(self, other)
+
+
+    def __or__(self, other):
+        return QueryOr(self, other)
 
 
     @classmethod

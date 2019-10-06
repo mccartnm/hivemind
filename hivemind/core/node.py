@@ -56,14 +56,10 @@ class NodeSubscriptionHandler(_HandlerBase):
             # to abort now
             return web.json_response(None) # Nothing to do...
 
-        # TODO!
-        # if self.path == '/shutdown':
-        #     self._node.shutdown()
-
-        for endpoint, subscription in self.endpoints.items():
+        for endpoint, callback in self.endpoints.items():
             if path == endpoint:
-                # Fire op that subscription function
-                subscription.function(data)
+                # Fire up the execution function
+                callback.function(data)
 
         return web.json_response(None)
 
@@ -98,9 +94,11 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
         self._registered = False
 
+        # The web server
+        self._app = None
+
         self.services()
         self.subscriptions()
-        self.data_tables()
 
 
     @property
@@ -178,13 +176,6 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
             self.additional_registration(self._handler_class)
 
-            # for data_table in self._data_tables:
-
-            #     self._handler_class.endpoints[
-            #         data_table.endpoint
-            #     ] = subscription
-            #     RootController.register_data_table(data_table)
-
             RootController.enable_node(self)
             self._set_enabled()
 
@@ -203,11 +194,6 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
     def subscriptions(self):
         """ Register any default subscriptions here """
-        return
-
-
-    def data_tables(self):
-        """ Register and default data tables for this now """
         return
 
 
@@ -276,10 +262,22 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
 
     def shutdown(self):
-        if self._registered:
-            RootController.deregister_node(self)
         for service in self._services:
             service.shutdown()
+
+        if self._registered:
+            self.on_shutdown()
+            RootController.deregister_node(self)
+
+    def on_shutdown(self):
+        """
+        Overload where needed to shut down any additional parts of the
+        nodes that are running.
+
+        This is called _before_ we deregister from the root
+        """
+        pass
+
 
     def is_running(self):
         with self.lock:

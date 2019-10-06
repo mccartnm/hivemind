@@ -120,6 +120,9 @@ class SQLiteInterface(_DatabaseIntegration):
         # print ('-- sql')
         # for statement in statements:
         #     print (sqlparse.format(statement, reindent=True, keyword_case='upper'))
+        # print ("_values:")
+        # __import__('pprint').pprint(values)
+        # print ('-------------------------------------')
 
         try:
             return cursor.execute(query, values)
@@ -163,7 +166,12 @@ class SQLiteInterface(_DatabaseIntegration):
 
             sql, _ = super().definition_sql(column)
 
-            return sql, [f'FOREIGN KEY({column_name}) REFERENCES {fk_table_name}({fk_pk_column_name})']
+            return sql, [
+                f'CONSTRAINT fk_{column_name}_to_{fk_pk_column_name} '
+                f'FOREIGN KEY({column_name}) '
+                f'REFERENCES {fk_table_name}({fk_pk_column_name}) '
+                f'ON DELETE {column.deletion_policy}'
+            ]
 
         # Return the default impl if nothing else matches
         return super().definition_sql(column)

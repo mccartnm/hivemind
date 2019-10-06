@@ -18,52 +18,54 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-# --
-Relationship fields
 """
 
-from hivemind.data.abstract.field import _Field, FieldTypes
+from hivemind.util.misc import SimpleRegistry
 
-class ForeignKeyField(_Field):
+class _Feature(object, metaclass=SimpleRegistry):
     """
-    A relationship between two tables.
+    A feature is essentially a plugin that defines additional
+    tables, endpoints, and functionality, for our hive core.
+
+    A _Feature can overload a various set of functions
     """
-    base_type = FieldTypes.FK
 
-    CASCADE = 'CASCADE'
-    SET_NULL = 'SET NULL'
-
-    def __init__(self, related_class, *args, **kwargs):
-        _Field.__init__(self, *args, **kwargs)
-        self._related_class = related_class
-
-        self._del_policy = ForeignKeyField.CASCADE
-
-        if not self._null and self._del_policy == self.SET_NULL:
-            raise TypeError(
-                'Cannot have a not-null field use SET_NULL'
-            )
+    def __init__(self, controller) -> None:
+        self._controller = controller
 
 
     @property
-    def deletion_policy(self):
-        return self._del_policy
+    def controller(self):
+        return self._controller
 
 
     @property
-    def related_class(self):
-        return self._related_class
-    
+    def lock(self):
+        return self.controller.lock
 
-    def prep_for_db(self, value):
+
+    @property
+    def database(self):
+        return self.controller.database
+
+
+    def endpoints(self) -> list:
         """
-        If we're searching with an instance of an object, we return
-        the primary key.
-        :param value: value to augment
-        :return: key of table instance or the original value
+        Override to provide specfic endpoints to the root
+        webserver
+
+        :return: list[tuple(method:str,
+                            path:str,
+                            callback:callable)]
         """
-        from hivemind.data.abstract.table import _TableLayout
-        if isinstance(value, _TableLayout):
-            return value.pk_value
-        return value
+        return []
+
+
+    def tables(self) -> list:
+        """
+        Override to provide tables for our data layer to
+        create for later consumption
+
+        :return: list[_TableLayout class,]
+        """
+        return []

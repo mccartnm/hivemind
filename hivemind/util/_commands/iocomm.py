@@ -532,7 +532,7 @@ class ZipComm(_AbstractCommand):
             ready_files = list(map(os.path.abspath, files))
 
             # With said paths, make sure we all have the same slash direction
-            ready_files = list(map(lambda x: x.replace('\\', '/'), ready_files))
+            ready_files = [p.replace('\\', '/') for p in ready_files]
 
             root = self.data.root
             if root is None:

@@ -1,0 +1,13 @@
+
+name: my-tasks
+
+tasks:
+
+  test_task_a:
+    type: request
+
+    help: |
+      A test command
+
+    commands:
+      - echo test_task_a_is_running

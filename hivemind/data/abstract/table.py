@@ -29,7 +29,7 @@ from hivemind.util import misc
 
 class _TableMeta(type):
     """
-    Metaclass for the _TableLoyout that helps reserve fields on the class
+    Metaclass for the _TableLayout that helps reserve fields on the class
     and convert them to the right type of item
     """
     def __init__(cls, name, bases, dct) -> None:
@@ -214,3 +214,13 @@ class _TableLayout(object, metaclass=_TableMeta):
             idx += 1
 
         return new_instance
+
+
+    @classmethod
+    def unqiue_constraints(cls) -> tuple:
+        """
+        Return any unique constraints for fields by overloading
+        this.
+        :return: tuple(tuple(str),)
+        """
+        return tuple()

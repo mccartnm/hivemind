@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 # --
-Abstract inteface for the database api
+Abstract interface for the database api
 """
 import sqlparse
 from purepy import pure_virtual
@@ -178,7 +178,7 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
             ('' if column._null else ' NOT NULL')
 
         if column._default and not callable(column._default):
-            sql += f' DEFAULT ({column._default})'
+            sql += f' DEFAULT ({column.default_for_sql()})'
 
         return sql, []
 
@@ -229,7 +229,9 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
             if attr in kwargs:
                 values.append(column.prep_for_db(kwargs[attr]))
             elif column.has_default:
-                values.append(column.prep_for_db(column.generate_default()))
+                values.append(column.prep_for_db(
+                    column.generate_default()
+                ))
             else:
                 values.append(None)
 
@@ -250,7 +252,20 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
         ).objects()[0]
 
 
-    def delete(self, instance):
+    def get_or_create(self, cls, **kwargs) -> tuple:
+        """
+        Get an instance of an object that matches the kwargs or, if it doesn't
+        exist, create it and return that instance.
+
+        :return: tuple(cls instance, created:bool)
+        """
+        try:
+            return self.new_query(cls, **kwargs).get(), False
+        except cls.DoesNotExist:
+            return self.create(cls, **kwargs), True
+
+
+    def delete(self, instance) -> None:
         """
         Destroy an item in the database
         :param instance: The item to remove
@@ -324,6 +339,10 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
             col_sql, constraints = self.definition_sql(column)
             column_sql.append(col_sql)
             all_constraints.extend(constraints)
+
+        for constrain_together_fields in table_layout.unqiue_constraints():
+            field_names = [table_layout.get_field(f).db_name() for f in constrain_together_fields]
+            all_constraints.append(f'UNIQUE({", ".join(field_names)})')
 
         sql += ', '.join(column_sql)
 
