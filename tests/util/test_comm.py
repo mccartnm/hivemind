@@ -247,14 +247,6 @@ class CommandTests(unittest.TestCase):
                 )
 
 
-    def test_read_global_settings(self):
-        """
-        We set this value long ago - just make sure the global settings stick with
-        us.
-        """
-        self.assertEqual(global_settings['test_global_settings'], 'a value')
-
-
     def test_zip_basics(self):
         """
         The zip command is quite intense and has a good chunk of

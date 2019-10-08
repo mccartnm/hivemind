@@ -42,6 +42,7 @@ from . import log
 from .feature import _Feature
 from .base import _HivemindAbstractObject, _HandlerBase
 from hivemind.util import global_settings
+from hivemind.util.misc import requests_retry_session
 
 from hivemind.data.abstract.scafold import _DatabaseIntegration
 
@@ -146,10 +147,10 @@ class RootController(_HivemindAbstractObject):
         """
         Subscription data held by the RootController
         """
-        def __init__(self, endpoint, port, proxy):
+        def __init__(self, endpoint, port, node):
             self._endpoint = endpoint
             self._port = port
-            self._proxy = proxy
+            self._node = node
 
         @property
         def port(self):
@@ -162,9 +163,9 @@ class RootController(_HivemindAbstractObject):
 
 
         @property
-        def proxy(self):
-            return self._proxy
-        
+        def node(self):
+            return self._node
+
 
     def __init__(self, **kwargs):
         _HivemindAbstractObject.__init__(
@@ -190,6 +191,7 @@ class RootController(_HivemindAbstractObject):
 
         # How we know to shut down our dispatch threads
         self._abort = False
+        self._done = False
 
         #
         # To avoid bogging down slow processing subscriptions,
@@ -208,7 +210,9 @@ class RootController(_HivemindAbstractObject):
         # Startup utilities
         #
         self._startup_condition = kwargs.get('startup_condition', None)
+        self._startup_event = kwargs.get('startup_event', None)
         self._abort_condition = kwargs.get('abort_condition', None)
+        self._abort_event = kwargs.get('abort_event', None)
 
         #
         # We don't start the database until we're within the run() command
@@ -250,7 +254,8 @@ class RootController(_HivemindAbstractObject):
         default_port = global_settings['default_port']
         result = requests.post(
             f'http://127.0.0.1:{default_port}/service/{service.name}',
-            json=json_data
+            json=json_data,
+            verify=False
         )
         result.raise_for_status()
         return 0 # We'll need some kind of passback
@@ -262,9 +267,11 @@ class RootController(_HivemindAbstractObject):
         Utility for running a POST at the controller service
         """
         default_port = global_settings['default_port']
-        result = requests.post(
+
+        result = requests_retry_session().post(
             f'http://127.0.0.1:{default_port}/register/{type_}',
-            json=json_data
+            json=json_data,
+            verify=False
         )
         result.raise_for_status()
         return result.json() # Should be the port
@@ -369,6 +376,9 @@ class RootController(_HivemindAbstractObject):
         Our run operation is built to handle the various incoming
         requests and respond to the required items in time.
         """
+        with self.lock:
+            self._done = False
+
         self._app = None
         try:
             if not loop:
@@ -449,6 +459,10 @@ class RootController(_HivemindAbstractObject):
                 with self._startup_condition:
                     self._startup_condition.notify_all()
 
+            if self._startup_event:
+                with self.lock:
+                    self._startup_event.set()
+
             # Just keep serving!
             web.run_app(
                 self._app,
@@ -456,7 +470,8 @@ class RootController(_HivemindAbstractObject):
                 handle_signals=False,
                 access_log=self.logger,
                 print=self.log_info,
-                abort_condition=self._abort_condition
+                abort_condition=self._abort_condition,
+                # reuse_port=True
             )
 
         except Exception as e:
@@ -466,14 +481,21 @@ class RootController(_HivemindAbstractObject):
                 print (traceback.format_exc())
 
         finally:
-            asyncio.run(self._shutdown())
+            with self.lock:
+                asyncio.run(self._shutdown())
 
-            if self._startup_condition:
-                # Make sure we clean up if something went wrong too
-                with self._startup_condition:
-                    self._startup_condition.notify_all()
+                if self._startup_condition:
+                    # Make sure we clean up if something went wrong too
+                    with self._startup_condition:
+                        self._startup_condition.notify_all()
+
+                if self._abort_event:
+                    self._abort_event.set()
+
+                self._done = True
 
             return
+
 
     def base_context(self):
         """
@@ -492,9 +514,10 @@ class RootController(_HivemindAbstractObject):
         :param name: The name of the node to search for
         :return: NodeRegister|None
         """
-        return self._database.new_query(
-            NodeRegister, name=name
-        ).get_or_null()
+        with self._database.transaction:
+            return self._database.new_query(
+                NodeRegister, name=name
+            ).get_or_null()
 
 
     def dispatch_one(self, node, endpoint, payload) -> None:
@@ -595,7 +618,7 @@ class RootController(_HivemindAbstractObject):
             for filter_, subinfo in self._subscriptions.items():
                 to_rem = []
                 for d in subinfo:
-                    if d.proxy == node_instance:
+                    if d.node == node_instance:
                         to_rem.append(d)
                 for d in to_rem:
                     subinfo.remove(d)
@@ -738,9 +761,14 @@ class RootController(_HivemindAbstractObject):
                         # payload to the subscriptions undernearth
                         #
                         for si in self._subscriptions[filter_]:
+
+                            node = self.get_node(si.node.name)
+                            if node and node.status != self.NODE_ONLINE:
+                                continue
+
                             url = f'http://127.0.0.1:{si.port}{si.endpoint}'
                             self._ship(
-                                url, dispatch_object.payload
+                                url, dispatch_object.payload, subinfo=(filter_, si)
                             )
             else:
                 # Check if we have single dispatch commands to run
@@ -765,16 +793,27 @@ class RootController(_HivemindAbstractObject):
                 )
 
 
-    def _ship(self, url, payload) -> None:
+    def _ship(self, url, payload, subinfo=None) -> None:
         """
         Do a basic POST operation
         """
-        result = requests.post(url, json=payload)
         try:
+            result = requests.post(url, json=payload, verify=False)
             result.raise_for_status()
         except Exception as e:
-            self.log_error(f"POST to {url} failed!")
-            self.log_error("  `-> " + str(e)) # ??
+            do_log = False
+            with self.lock:
+                if self._done:
+                    return
+
+                filter_, si = subinfo
+                if filter_ in self._subscriptions:
+                    if si in self._subscriptions:
+                        do_log = True
+
+            if do_log:
+                self.log_error(f"POST to {url} failed!")
+                self.log_error("  `-> " + str(e)) # ??
 
 
     def _init_database(self) -> None:

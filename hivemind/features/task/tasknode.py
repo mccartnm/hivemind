@@ -228,6 +228,7 @@ class TaskNode(_Node):
         :param task: _Task instance that we'll be using
         :return dict:
         """
+        default_port = global_settings['default_port']
         return RootController._register_post('task', {
             'node': task.node.name,
             'name': task.name,

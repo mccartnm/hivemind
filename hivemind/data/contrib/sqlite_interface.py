@@ -84,7 +84,8 @@ class SQLiteInterface(_DatabaseIntegration):
 
         self.__db = sqlite3.connect(
             database_name,
-            detect_types=sqlite3.PARSE_DECLTYPES # To support JSON
+            detect_types=sqlite3.PARSE_DECLTYPES, # To support JSON
+            check_same_thread=False
         )
 
         # We control the transactions ourselves

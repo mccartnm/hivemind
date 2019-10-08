@@ -27,7 +27,11 @@ import shutil
 import tempfile
 import subprocess
 from contextlib import contextmanager
-from typing import TypeVar, Generic, Callable, Generator
+from typing import TypeVar, Generic, Callable, Generator, Optional
+
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from purepy import PureVirtualMeta
 
@@ -198,6 +202,33 @@ _comp2 = re.compile('([a-z0-9])([A-Z])')
 def to_camel_case(name):
     s1 = re.sub(_comp1, r'\1_\2', name)
     return re.sub(_comp2, r'\1_\2', s1).lower()
+
+
+def requests_retry_session(
+    retries: Optional[int]=3,
+    backoff_factor: Optional[float]=0.3,
+    status_forcelist: Optional[tuple]=(500, 502, 504),
+    session: Optional[requests.Session]=None) -> requests.Session:
+    """
+    This heaping mess is mainly for the test suite on unix systems.
+
+    Often the python layer gets ahead of the network interface and causes
+    a whole mess of trouble when we initially ask for things in quick
+    sucession. This is a cheap way to let urllib3 do some of the heavy
+    lifting. We simply try a few times :P
+    """
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
 # -- Metaclasses
 

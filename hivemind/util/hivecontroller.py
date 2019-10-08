@@ -31,6 +31,7 @@ import logging.handlers
 import threading
 import importlib.machinery
 import importlib.util
+import concurrent.futures
 from typing import Optional
 from contextlib import contextmanager
 
@@ -110,7 +111,7 @@ class HiveController(object):
 
         self._root_loop = None
         self._root_abort = None
-        self._node_aborts = []
+        self._root_abort_event = None
 
 
     @property
@@ -249,6 +250,7 @@ class HiveController(object):
 
         :return: None
         """
+        global_settings._total_reset()
         source_file = os.path.join(
             self._hive_root_folder,
             'config',
@@ -363,10 +365,14 @@ class HiveController(object):
         for node_class in self._node_classes:
 
             loop = asyncio.new_event_loop()
+            abort_condition = asyncio.Condition(loop=loop)
+            abort_event = threading.Event()
 
             node_instance = node_class(
                 node_class.__name__,
-                logger=self.node_logger(node_class.__name__, lvl)
+                logger=self.node_logger(node_class.__name__, lvl),
+                abort_condition=abort_condition,
+                abort_event=abort_event
             )
 
             node_thread = threading.Thread(
@@ -376,6 +382,9 @@ class HiveController(object):
             )
 
             node_thread.node_instance = node_instance
+            node_thread.abort_condition = abort_condition
+            node_thread.abort_event = abort_event
+            node_thread.loop = loop
             node_thread.daemon = True
             node_thread.start()
             self._node_threads.append(node_thread)
@@ -393,11 +402,15 @@ class HiveController(object):
         lvl = logging.DEBUG if self._verbose else logging.WARNING
         self._root_loop = asyncio.new_event_loop()
         self._root_abort = asyncio.Condition(loop=self._root_loop)
+        self._root_abort_event = threading.Event()
+        startup_event = threading.Event()
 
         # -- Parameters to pass to our root for easy setup
         self._root_kwargs['logger'] = self.root_logger(lvl)
         self._root_kwargs['startup_condition'] = self._condition
         self._root_kwargs['abort_condition'] = self._root_abort
+        self._root_kwargs['abort_event'] = self._root_abort_event
+        self._root_kwargs['startup_event'] = startup_event
 
         self._root_instance = self._root_class(**self._root_kwargs)
 
@@ -411,6 +424,14 @@ class HiveController(object):
         with self._condition:
             # Let's make sure it's runnin before we start making moves
             # with our nodes
+
+            with self._root_instance.lock:
+                if self._root_abort_event.is_set():
+                    raise RuntimeError('Root could not start')
+
+                if startup_event.is_set():
+                    return # We're already up
+
             self._condition.wait(60.0)
 
 
@@ -425,25 +446,38 @@ class HiveController(object):
         """
         # -- Node destruction
         for node_thread in self._node_threads:
-            try:
-                node_thread.node_instance.shutdown()
-            except Exception as e:
-                print (":FAILED TO SHUTDOWN NODE:")
-                continue
+            if not node_thread.loop.is_closed():
+                f = asyncio.run_coroutine_threadsafe(
+                    self.fire_abort(node_thread.abort_condition),
+                    node_thread.loop
+                )
+                try:
+                    r = f.result(5.0)
+                except concurrent.futures.TimeoutError:
+                    pass
+            if not node_thread.abort_event.is_set():
+                node_thread.abort_event.wait()
 
         # -- Root Destruction
         if self._root_loop and (not self._root_loop.is_closed()):
-            future = asyncio.run_coroutine_threadsafe(
-                self.fire_abort_root(), self._root_loop
+            f = asyncio.run_coroutine_threadsafe(
+                self.fire_abort(self._root_abort),
+                self._root_loop
             )
-            # Wait for the result:
-            result = future.result()
+            try:
+                r = f.result(5.0)
+            except concurrent.futures.TimeoutError:
+                pass
+            if not self._root_abort_event.is_set():
+                self._root_abort_event.wait()
 
 
-    async def fire_abort_root(self) -> None:
+    async def fire_abort(self, condition) -> None:
         """
         Execute the condition to abort our root
         :return: None
         """
-        async with self._root_abort:
-            self._root_abort.notify_all()
+        await asyncio.sleep(1)
+
+        async with condition:
+            condition.notify_all()

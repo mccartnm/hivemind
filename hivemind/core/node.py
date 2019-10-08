@@ -75,7 +75,10 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
     _abstract = False
 
     def __init__(self, name=None, **kwargs):
-        _HivemindAbstractObject.__init__(self, **kwargs)
+        _HivemindAbstractObject.__init__(
+            self,
+            logger=kwargs.get('logger', None)
+        )
 
         # The name of this node
         self._name = name or uuid.uuid4()
@@ -96,6 +99,9 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
         # The web server
         self._app = None
+
+        self._abort_condition = kwargs.get('abort_condition', None)
+        self._abort_event = kwargs.get('abort_event', None)
 
         self.services()
         self.subscriptions()
@@ -181,8 +187,17 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
 
             self._serve(loop)
 
+        except Exception as err:
+            if not isinstance(err, KeyboardInterrupt):
+                import traceback
+                self.log_critical(traceback.format_exc())
+                print (traceback.format_exc())
+
         finally:
             self.shutdown()
+
+            if self._abort_event:
+                self._abort_event.set()
             return
 
     # -- Virtual Interface
@@ -269,6 +284,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
             self.on_shutdown()
             RootController.deregister_node(self)
 
+
     def on_shutdown(self):
         """
         Overload where needed to shut down any additional parts of the
@@ -316,5 +332,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
             port=self._port,
             handle_signals=False,
             access_log=self.logger,
-            print=self.log_info
+            abort_condition=self._abort_condition,
+            print=self.log_info,
+            # reuse_port=True # ??
         )

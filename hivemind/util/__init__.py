@@ -68,6 +68,19 @@ class _GlobalSettings(object):
         self.__d.update(other)
 
 
+    def _total_reset(self):
+        """
+        Called to completely reset the global_settings dictionary
+
+        .. warning::
+
+            For internal use only. Should never be used in production
+
+        :return: None
+        """
+        self.__d = {}
+
+
 #
 # Internal pointer object to make sure we _always_ use the same
 # settings instance no matter how we import it.

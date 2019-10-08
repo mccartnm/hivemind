@@ -54,7 +54,8 @@ class TestTasks(unittest.TestCase):
                 'hive_features' : [
                     # Need to turn the feature on
                     'hivemind.features.task'
-                ]
+                ],
+                'default_port' : 9999
             }
         )
 
@@ -65,12 +66,17 @@ class TestTasks(unittest.TestCase):
             # or something like that
 
             port = hive_controller.settings['default_port']
-            requests.post(f'http://127.0.0.1:{port}/tasks/execute',
-                            json={
-                                'node': 'ATaskNode',
-                                'name': 'test_task_a',
-                                'parameters' : {}
-                            })
+
+            def fire():
+                res = requests.post(f'http://127.0.0.1:{port}/tasks/execute',
+                                json={
+                                    'node': 'ATaskNode',
+                                    'name': 'test_task_a',
+                                    'parameters' : {}
+                                })
+
+            for i in range(25):
+                fire()
 
 
     @_within_test_hive
@@ -86,7 +92,8 @@ class TestTasks(unittest.TestCase):
                 # Make sure the feature is off
                 'hive_features' : [
                     # 'hivemind.features.task'
-                ]
+                ],
+                'default_port' : 10455
             }
         )
 

@@ -24,6 +24,8 @@ import json
 import logging
 import threading
 
+from typing import Any, Union
+
 from aiohttp import web
 
 class _HivemindAbstractObject(object):
@@ -35,9 +37,11 @@ class _HivemindAbstractObject(object):
         self._logger = logger
 
 
-    def __getattr__(self, key):
+    def __getattr__(self, key) -> Any:
         """
-        Routing utility for logging reasons
+        Routing utility for logging reasons. See
+        _HivemindAbstractObject._log() for more information
+        :return: Any
         """
         if key.startswith('log_'):
             return lambda msg: self._log(key.replace('log_', ''), msg)
@@ -47,16 +51,33 @@ class _HivemindAbstractObject(object):
 
 
     @property
-    def lock(self):
+    def lock(self) -> threading.RLock:
+        """
+        All hive objects contain an internal threading.RLock for whatever
+        use case the developer can think of.
+
+        :return: The threading.RLock() given to this object.
+        """
         return self._lock
 
 
     @property
-    def logger(self):
+    def logger(self) -> Union[logging.Logger, None]:
+        """ :return: The logger assigned to this object or None """
         return self._logger
 
 
-    def _log(self, type, msg):
+    def _log(self, type: str, msg: str) -> None:
+        """
+        Execute a specific log function. This works by using getattr
+        to obtain the function from our logger. If no logger is set on
+        the object, the default is used.
+
+        :param type: The logger attribute (one of ingo, debug, warning, error,
+                     critical)
+        :param msg: The message to relay
+        :return: None
+        """
         if self._logger:
             getattr(self._logger, type)(msg)
         else:
@@ -64,6 +85,10 @@ class _HivemindAbstractObject(object):
 
 
     def run(self):
+        """
+        The function that all hive objects should overload to execute whatever
+        their specific process is.
+        """
         raise NotImplementedError("Must overload run() method")
 
 
@@ -75,7 +100,7 @@ class _HandlerBase:
     def __init__(self) -> None:
         pass
 
-    class Error(object):
+    class Error(object): # pragma: no cover
         def __init__(self, message):
             self._message = message
 
