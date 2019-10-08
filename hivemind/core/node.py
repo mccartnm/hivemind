@@ -315,5 +315,6 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
             self._app,
             port=self._port,
             handle_signals=False,
-            access_log=self.logger
+            access_log=self.logger,
+            print=self.log_info
         )

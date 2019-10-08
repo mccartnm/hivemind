@@ -156,7 +156,7 @@ And ``batsignal.py`` should look something like:
             Register any default services
             :return: None
             """
-            return
+            super().services()
 
 
         def subscriptions(self) -> None:
@@ -164,7 +164,8 @@ And ``batsignal.py`` should look something like:
             Register any default subscriptions
             :return: None
             """
-            return
+            super().subscriptions()
+
 
     if __name__ == '__main__': # pragma: no cover
         # An initialization command.
@@ -326,5 +327,20 @@ Within the node definition (``nodes/batman/batman.py``) we can set up the subscr
                 print ('Oh no! Batman doesn\'t know what to do!')
 
             return 0
+
+With that node now ready to go, let's fire the whole system up!
+
+.. code-block:: shell
+
+    ~$> hm dev
+
+If all goes well, you should see the text ``"Batman has saved the day!"`` every few seconds.
+
+Next Steps
+----------
+
+We've done it! Created a ``hive``, created nodes, set up an interconnected network, and run that network in a development arena. All from the same terminal and without lifting *too* many fingers.
+
+With this knowledge you can do plenty of powerful things but ``hivemind`` has quite a bit more to offer.
 
 .. _Django: https://www.djangoproject.com/

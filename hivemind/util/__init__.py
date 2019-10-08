@@ -64,6 +64,10 @@ class _GlobalSettings(object):
         return self.__d[key]
 
 
+    def update(self, other: dict) -> None:
+        self.__d.update(other)
+
+
 #
 # Internal pointer object to make sure we _always_ use the same
 # settings instance no matter how we import it.

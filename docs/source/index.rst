@@ -49,8 +49,9 @@ This approach can take many forms and doesn't fit all use cases but it's a power
     :maxdepth: 2
     :caption: Features
 
-    basics/words
     basics/model
+    basics/words
+    basics/tasks
 
 .. toctree::
     :maxdepth: 2

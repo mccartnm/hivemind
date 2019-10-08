@@ -1,6 +1,7 @@
 purepy>=1.0.0
 PyYAML>=5.1.2
-aiohttp>=3.6.1
-# jinja2
+# Currently using a custom aiohttp with available abort_condition= flag
+# aiohttp>=3.6.1
+https://github.com/mccartnm/aiohttp/archive/3.6.1abort.zip#egg=aiohttp
 aiohttp-jinja2>=1.1.2
 sqlparse>=0.3.0

@@ -29,8 +29,9 @@ from hivemind.data.tables import NodeRegister
 
 from hivemind.util.platformdict import pdict
 from hivemind.util.taskyaml import TaskYaml
+from hivemind.util import global_settings
 from .task import _Task, kTaskTypes
-# from .tables import TaskRegister, TaskInfo
+
 
 class TaskNode(_Node):
     """
@@ -63,6 +64,12 @@ class TaskNode(_Node):
 
     """
     def __init__(self, name: str, config: (str, TaskYaml) = None, **kwargs) -> None:
+        if not global_settings.feature_enabled('hivemind.features.task'):
+            raise EnvironmentError(
+                'Task feature disabled! Cannot create task nodes.'
+                ' Please add "hivemind.features.task" to the "hive_features"'
+            )
+
         _Node.__init__(self, name, **kwargs)
 
         if config is None and hasattr(self, 'use_config'):

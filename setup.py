@@ -11,6 +11,8 @@ def _get_required():
             line = line.strip()
             if line.startswith('#') or line.startswith('-'):
                 continue
+            if not line:
+                continue
             output.append(line)
     return output
 

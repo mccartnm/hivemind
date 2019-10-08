@@ -1,12 +1,12 @@
 """
 {_node_name} node for {_hive_name}
 """
-from hivemind import _Node
+from {_module_import} import {_node_class}
 
 
-class {_node_name}(_Node):
+class {_node_name}({_node_class}):
     """
-    {_node_name}Node Implementation
+    {_node_name} Node Implementation
     """
 
     def services(self) -> None:
@@ -14,7 +14,7 @@ class {_node_name}(_Node):
         Register any default services
         :return: None
         """
-        return
+        super().services()
 
 
     def subscriptions(self) -> None:
@@ -22,7 +22,7 @@ class {_node_name}(_Node):
         Register any default subscriptions
         :return: None
         """
-        return
+        super().subscriptions()
 
 
 if __name__ == '__main__': # pragma: no cover

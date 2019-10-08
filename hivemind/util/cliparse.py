@@ -23,6 +23,7 @@ SOFTWARE.
 import os
 import sys
 import uuid
+import importlib
 import argparse
 
 from hivemind.util import TaskYaml, pdict, CommandParser
@@ -73,6 +74,7 @@ def _new_node(args: argparse.Namespace) -> int:
     """
     Initialize a new node within this hive.
     """
+    log.start(args.verbose)
     if not os.path.isfile(f'config{os.sep}hive.py'):
         print ('Not a valid hive! Cannot find hive.py')
         return 1
@@ -82,6 +84,17 @@ def _new_node(args: argparse.Namespace) -> int:
     node_name = args.name
     config.add_attribute('_hive_name', os.path.basename(os.getcwd()))
     config.add_attribute('_node_name', node_name.replace(' ', '_'))
+
+    # Node Defaults
+    config.add_attribute('_module_import', 'hivemind')
+    config.add_attribute('_node_class', '_Node')
+
+    if args.node_class:
+        module, class_ = args.node_class.rsplit('.', 1)
+        config.add_attribute('_module_import', module)
+        module = importlib.import_module(module)
+        class_ = getattr(module, class_).__name__
+        config.add_attribute('_node_class', class_)
 
     parser = CommandParser(config['init_new_node'], task_data=config)
     parser.compute()
@@ -136,6 +149,7 @@ def build_hivemind_parser() -> argparse.ArgumentParser:
     # -- Node creation
     new_node = _new_subparser('create_node', description='Generate a new node within a hive')
     new_node.add_argument('name', help='The name of this node')
+    new_node.add_argument('-c', '--node-class', help='A specific class of node')
     new_node.set_defaults(func=_new_node)
     parser.subparser_map['create_node'] = new_node
 

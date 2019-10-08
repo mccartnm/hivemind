@@ -208,6 +208,7 @@ class RootController(_HivemindAbstractObject):
         # Startup utilities
         #
         self._startup_condition = kwargs.get('startup_condition', None)
+        self._abort_condition = kwargs.get('abort_condition', None)
 
         #
         # We don't start the database until we're within the run() command
@@ -453,7 +454,9 @@ class RootController(_HivemindAbstractObject):
                 self._app,
                 port=default_port,
                 handle_signals=False,
-                access_log=self.logger
+                access_log=self.logger,
+                print=self.log_info,
+                abort_condition=self._abort_condition
             )
 
         except Exception as e:

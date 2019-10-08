@@ -26,7 +26,7 @@ import threading
 class TerminalThread(threading.Thread):
     """
     (python 3.7+) thread that can be killed somewhat gracefully by raising
-    and exception within it, letting python to the rest.
+    and exception within it, letting python do the rest.
 
     https://www.geeksforgeeks.org/python-different-ways-to-kill-a-thread/
     """
@@ -47,7 +47,6 @@ class TerminalThread(threading.Thread):
         Call to execute an exception within the thread
         :return: None
         """
-
         thread_id = self.get_id()
         res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
             thread_id, ctypes.py_object(SystemExit)

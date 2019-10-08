@@ -56,7 +56,7 @@ HIVE_DEFAULT_PORT = 9467
 
 # -- Enabled Features
 HIVE_FEATURES = [
-    'hivemind.features.task' #< Callable task and cron library
+    # 'hivemind.features.task' #< Callable task and cron library
 ]
 
 # ---------------------------------------------------------------

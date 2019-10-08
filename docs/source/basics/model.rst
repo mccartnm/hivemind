@@ -10,7 +10,7 @@ There are three layers within ``hivemind``.
 .. code-block:: none
 
                  + --------------------------------------------- +
-    Data Layer > |           [ Data Layer ] <-- Eventually       | Backend
+    Data Layer > |           [ Data Layer ]                      | Backend
                  |                 |                             |
                  +-----------------|-----------------------------+
     Control    > |         [    Controller   ]                   | Network

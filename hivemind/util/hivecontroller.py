@@ -31,6 +31,7 @@ import logging.handlers
 import threading
 import importlib.machinery
 import importlib.util
+from typing import Optional
 from contextlib import contextmanager
 
 from hivemind import _Node
@@ -65,7 +66,8 @@ class HiveController(object):
                  nodes: list = [],
                  root: bool = True,
                  root_only: bool = False,
-                 verbose: bool = False) -> None:
+                 verbose: bool = False,
+                 augment_settings: Optional[dict] = {}) -> None:
         """
         Initialize a Hive
 
@@ -79,7 +81,7 @@ class HiveController(object):
 
         self._verbose = verbose
         self._hive_root_folder = hive_root
-        self._load_settings()
+        self._load_settings(augment_settings)
 
         self._root_module = None
         self._root_class = None
@@ -105,6 +107,10 @@ class HiveController(object):
         self._node_threads = []
         self._lock = threading.RLock()
         self._condition = threading.Condition(self._lock)
+
+        self._root_loop = None
+        self._root_abort = None
+        self._node_aborts = []
 
 
     @property
@@ -137,11 +143,18 @@ class HiveController(object):
         Run our nodes/controllers as requested
         :return: None
         """
-        if self._root_class:
-            self.__init_root()
+        try:
+            # Make sure we cleanup if something goes wrong here too
 
-        if self._node_classes:
-            self.__init_nodes()
+            if self._root_class:
+                self.__init_root()
+
+            if self._node_classes:
+                self.__init_nodes()
+
+        except Exception as e:
+            self.__kill()
+            raise
 
         if not async_:
             try:
@@ -157,6 +170,9 @@ class HiveController(object):
                             raise RuntimeError('Quit')
             except KeyboardInterrupt as e:
                 pass # Ignore the printing
+
+            except Exception as err:
+                raise
 
             finally:
                 self.__kill()
@@ -222,7 +238,7 @@ class HiveController(object):
         return new_log
 
 
-    def _load_settings(self) -> None:
+    def _load_settings(self, additional_settings: Optional[dict] = {}) -> None:
         """
         Load our settings config using the ``<hive_location>/config/hive.py``
 
@@ -243,6 +259,8 @@ class HiveController(object):
         if os.environ.get('HIVE_SETTINGS'):
             overloaded_settings = os.environ['HIVE_SETTINGS']
             self.__load_module('hm_override_settings', overloaded_settings)
+
+        global_settings.update(additional_settings)
 
 
     def _obtain_root_class(self) -> None:
@@ -346,8 +364,10 @@ class HiveController(object):
 
             loop = asyncio.new_event_loop()
 
-            node_instance = node_class(node_class.__name__,
-                                      logger=self.node_logger(node_class.__name__, lvl))
+            node_instance = node_class(
+                node_class.__name__,
+                logger=self.node_logger(node_class.__name__, lvl)
+            )
 
             node_thread = threading.Thread(
                 target=node_instance.run,
@@ -371,18 +391,20 @@ class HiveController(object):
         :return: None
         """
         lvl = logging.DEBUG if self._verbose else logging.WARNING
-        loop = asyncio.new_event_loop()
+        self._root_loop = asyncio.new_event_loop()
+        self._root_abort = asyncio.Condition(loop=self._root_loop)
 
         # -- Parameters to pass to our root for easy setup
         self._root_kwargs['logger'] = self.root_logger(lvl)
         self._root_kwargs['startup_condition'] = self._condition
+        self._root_kwargs['abort_condition'] = self._root_abort
 
         self._root_instance = self._root_class(**self._root_kwargs)
 
         self._root_thread = TerminalThread(
             target=self._root_instance.run,
             name='root_process',
-            args=(loop,)
+            args=(self._root_loop,),
         )
         self._root_thread.daemon = True
         self._root_thread.start()
@@ -403,7 +425,25 @@ class HiveController(object):
         """
         # -- Node destruction
         for node_thread in self._node_threads:
-            node_thread.node_instance.shutdown()
+            try:
+                node_thread.node_instance.shutdown()
+            except Exception as e:
+                print (":FAILED TO SHUTDOWN NODE:")
+                continue
 
         # -- Root Destruction
-        self._root_thread.raise_exception()
+        if self._root_loop and (not self._root_loop.is_closed()):
+            future = asyncio.run_coroutine_threadsafe(
+                self.fire_abort_root(), self._root_loop
+            )
+            # Wait for the result:
+            result = future.result()
+
+
+    async def fire_abort_root(self) -> None:
+        """
+        Execute the condition to abort our root
+        :return: None
+        """
+        async with self._root_abort:
+            self._root_abort.notify_all()
