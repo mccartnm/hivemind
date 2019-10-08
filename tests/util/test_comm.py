@@ -1,10 +1,12 @@
 import os
+import zipfile
 import unittest
 import platform
 
 from hivemind.util import TaskYaml, pdict
 from hivemind.util import CommandParser, CommandError
 from hivemind.util import ExpansionError, ComputeError
+from hivemind.util.compression import ZFile
 
 from hivemind.util.misc import run_process, temp_dir
 
@@ -251,3 +253,47 @@ class CommandTests(unittest.TestCase):
         us.
         """
         self.assertEqual(global_settings['test_global_settings'], 'a value')
+
+
+    def test_zip_basics(self):
+        """
+        The zip command is quite intense and has a good chunk of
+        options. Let's just try a few.
+        """
+        with temp_dir() as source_dir:
+            source_dir = source_dir.replace('\\', '/')
+
+            os.makedirs(source_dir + '/test_directory')
+            self._touch(source_dir + '/foo.txt')
+            self._touch(source_dir + '/bar.log')
+            self._touch(source_dir + '/test_directory/schmoo.txt')
+            self._touch(source_dir + '/test_directory/schmoo_2.txt')
+
+            with temp_dir() as dest_dir:
+                dest_dir = dest_dir.replace('\\', '/')
+
+                self._compute([
+                    f':cd {dest_dir}',
+                    f':zip myzip.zip --file {source_dir}'
+                ])
+
+                output = f'{dest_dir}/myzip.zip'
+                self.assertTrue(
+                    os.path.isfile(output)
+                )
+
+                with ZFile(output, 'r') as zfile:
+                    infos = list(zfile.infolist())
+                    self.assertEqual(len(infos), 4)
+
+                self._compute([
+                    f':cd {dest_dir}',
+                    f':zip -x myzip.zip -o myzip'
+                ])
+
+                self.assertTrue(
+                    os.path.isdir(f'{dest_dir}/myzip')
+                )
+                self.assertTrue(
+                    os.path.isdir(f'{dest_dir}/myzip/test_directory')
+                )

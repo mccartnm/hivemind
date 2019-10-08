@@ -52,7 +52,7 @@ class CommandParser(object):
     TaskYaml instance to make it possible to use variable expansion
     and host a few powerful utilities.
     """
-    HM_COMMAND = re.compile(r'^:(?P<name>[^\s]+)(\s)?(?P<args>(.*))$')
+    HM_COMMAND = re.compile(r'^\:(?P<name>[^\s]+)(\s)?(?P<args>(.*))$')
 
     def __init__(self, commands: CommandTypes, task_data: T, arguments: dict = {}) -> None:
 

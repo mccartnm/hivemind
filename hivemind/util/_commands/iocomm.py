@@ -508,7 +508,7 @@ class ZipComm(_AbstractCommand):
         return os.path.commonprefix(files)
 
 
-    def run(self, task_data: T) -> ComputeReturn:
+    def exec_(self, task_data: T) -> ComputeReturn:
         """
         Run the command, zipping up files as needed
         """
