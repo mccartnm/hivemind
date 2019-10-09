@@ -82,6 +82,10 @@ class TaskNode(_Node):
         self._valid = True
         self._tasks = []
 
+        self._errors = []
+        self._warnings = []
+
+
     # -- Node Overrides
 
     def additional_registration(self, handler_class) -> None:
@@ -90,6 +94,9 @@ class TaskNode(_Node):
         :param handler_class: NodeSubscriptionHandler class
         :return: None
         """
+        if not self.valid:
+            return # run() should make it so we don't get here
+
         self.create_tasks()
 
         for task in self._tasks:
@@ -102,6 +109,17 @@ class TaskNode(_Node):
             #
             result = self.register_task(task)
             # task.set_root_data(result)
+
+
+    def run(self, *args, **kwargs):
+        """
+        Overload the run mechanism to avoid registering invalid
+        tasks.
+        """
+        self.verify_config()
+        if not self.valid:
+            return
+        return super().run(*args, **kwargs)
 
 
     def on_shutdown(self):
@@ -117,6 +135,14 @@ class TaskNode(_Node):
         return self._valid
 
 
+    def errors(self):
+        return self._errors
+
+
+    def warnings(self):
+        return self._warnings
+
+
     def create_tasks(self) -> None:
         """
         Iterate through our task descriptors in our TaskYaml and construct
@@ -129,15 +155,13 @@ class TaskNode(_Node):
             )
 
 
-    def verify_config(self) -> None:
+    def verify_config(self, chatty=True) -> tuple:
         """
         Run a diagnostic on our task config to make sure all the
         components are there.
-        :return: None
+        :param chatty: True if logging should be used to relay problems with config
+        :return: tuple(list[error:str,], list[warning:str,])
         """
-        errors = []
-        warnings = []
-
         #
         # Assert we have the minimum viable keys
         #
@@ -145,7 +169,7 @@ class TaskNode(_Node):
 
         for key in required:
             if self._config[key] is None:
-                errors.append(f'Missing required key: {key}')
+                self._errors.append(f'Missing required key: {key}')
 
         #
         # Assert we have viable tasks
@@ -153,38 +177,46 @@ class TaskNode(_Node):
         task_mapping = self._config['tasks']
         if task_mapping:
             if not isinstance(task_mapping, (dict, pdict)):
-                errors.append(f'"tasks" must be a map. Got: {type(task_mapping)}')
+                self._errors.append(f'"tasks" must be a map. Got: {type(task_mapping)}')
             else:
                 for task_name, task_data in task_mapping.items():
 
                     if ('type' not in task_data) or (not isinstance(task_data['type'], str)):
-                        errors.append(f'Bad task type! Task: {task_name}. Must be a string.')
+                        self._errors.append(f'Bad task type! Task: {task_name}. Must be a string.')
 
                     elif task_data['type'] not in kTaskTypes:
-                        errors.append('Unknown task type! Task: '
+                        self._errors.append('Unknown task type! Task: '
                                       f'{task_name} - Type: {task_data["type"]}')
+
+                    if ('commands' not in task_data):
+                        self._errors.append(f'No commands for {task_name}')
 
                     if 'help' in task_data:
                         if not isinstance(task_data['help'], str):
-                            errors.append(f'Task {task_name} - help must be a string')
+                            self._errors.append(f'Task {task_name} - help must be a string')
 
                     if 'parameters' in task_data:
                         if not isinstance(task_data['parameters'], list):
-                            errors.append(f'Task {task_name} - parameters must be a list')
+                            self._errors.append(f'Task {task_name} - parameters must be a list')
                         else:
                             for param in task_data['parameters']:
-                                self._verify_param(task_name, param, errors, warnings)
+                                self._verify_param(task_name, param, self._errors, self._warnings)
 
-        if errors:
-            self._valid = False
-            self.log_critical('Invalid task configuration!')
-            for err in errors:
-                self.log_critical('  - ' + err)
-            return
 
-        if warnings:
-            for warning in warnings:
+        if chatty and self._warnings:
+            for warning in self._warnings:
                 self.log_warning(warning)
+
+        if self._errors:
+            self._valid = False
+            if chatty:
+                self.log_critical(
+                    f'Invalid task configuration! (TaskNode {self.name})'
+                )
+                for err in self._errors:
+                    self.log_critical('  - ' + err)
+
+        return self._errors, self._warnings
 
 
     def _verify_param(self, task_name: str, param: Any, errors: list, warnings: list) -> None:

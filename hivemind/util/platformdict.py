@@ -263,8 +263,19 @@ class PlatformAwareDict(object):
             yield (k, v)
 
 
-    def get(self, key, default):
+    def get(self, key, default=None):
+        """
+        Simple get operations mirroting a dictionary
+        """
         return self[key] or default
+
+
+    def pop(self, key):
+        """
+        Typical pop function of a dictionary
+        """
+        return self.__d.pop(key)
+
 
 # Small form factor
 pdict = PlatformAwareDict

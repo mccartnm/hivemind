@@ -88,7 +88,7 @@ class _Service(_HivemindAbstractObject):
 
 
     def abort(self):
-        logging.info(f"Aborting {self.name}...")
+        self.log_info(f"Aborting {self.name}...")
         with self.lock:
             self._abort = True
 

@@ -108,7 +108,7 @@ class TaskFeature(_Feature):
         :param request: aiohttp request
         :return: context for the jijna2 task template
         """
-        return controller.base_context()
+        return self.controller.base_context()
 
 
     async def execute_task(self, request):
@@ -121,7 +121,7 @@ class TaskFeature(_Feature):
         self._validate_keys(data, required, 'Task Execution')
 
         res = self._node_and_task(data)
-        if not res:
+        if not res: # pragma: no cover
             msg = f'Node {data["node"]} or ' + \
                   f'task {data["name"]} not found'
             assert False, msg # ??
@@ -196,14 +196,14 @@ class TaskFeature(_Feature):
             node = self.controller.database.new_query(
                 NodeRegister, name=data['node']
             ).get()
-        except NodeRegister.DoesNotExist:
+        except NodeRegister.DoesNotExist: # pragma: no cover
             return # ???/
 
         try:
             task = self.controller.database.new_query(
                 TaskRegister, node=node, name=data['name']
             ).get()
-        except TaskRegister.DoesNotExist:
+        except TaskRegister.DoesNotExist: # pragma: no cover
             return # -- need an error of some sort
 
         return node, task
@@ -241,7 +241,7 @@ class TaskFeature(_Feature):
             task_registry = self.database.new_query(
                 TaskRegister, node=node, name=payload['name']
             ).get()
-        except TaskRegister.DoesNotExist:
+        except TaskRegister.DoesNotExist: # pragma: no cover
             return
 
         self.database.delete(task_registry)

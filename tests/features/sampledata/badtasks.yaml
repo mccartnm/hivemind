@@ -1,0 +1,34 @@
+
+not_name: my-bad-tasks
+
+tasks:
+
+  test_task_a:
+    type: not_a_type
+
+    help: ["must not not be a list!"]
+
+    parameters:
+      - "should be a list, not a string"
+
+    commands:
+      - echo test_task_a_is_running
+
+
+  foobar_task:
+    type: ["must be a string"]
+
+    help: |
+      This is ok
+
+    parameters:
+      - ["my_param", "some details about it?"]
+
+    commands:
+      - still need to work on this validation
+
+
+  anotha_task:
+    # missing type
+
+    parameters: 'this should be a list'

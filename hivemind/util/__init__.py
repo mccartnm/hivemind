@@ -19,6 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+from contextlib import contextmanager
 
 from .platformdict import PlatformAwareDict, pdict
 from .taskyaml import TaskYaml, ExpansionError
@@ -68,6 +69,10 @@ class _GlobalSettings(object):
         self.__d.update(other)
 
 
+    def pop(self, value) -> Any:
+        return self.__d.pop(value)
+
+
     def _total_reset(self):
         """
         Called to completely reset the global_settings dictionary
@@ -95,6 +100,31 @@ class _GlobalSettingsHandler(object):
 
     def __getattr__(self, key):
         return getattr(_GlobalSettings._internal_settings_instance, key)
+
+    @contextmanager
+    def override(self, options):
+        """
+        We have the lovely ability to set temporary values!
+        """
+        placeholder = {}
+
+        class NoVal: pass
+        noval = NoVal() # No change that the dictionary has this value
+
+        for k, v in options.items():
+            current_value = self.get(k, noval)
+            if current_value != noval:
+                placeholder[k] = current_value
+
+            self[k] = v
+
+        yield
+
+        for k in options:
+            if k in placeholder:
+                self[k] = placeholder[k]
+            else:
+                self.pop(k)
 
 
 #

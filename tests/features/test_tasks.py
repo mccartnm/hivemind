@@ -19,6 +19,9 @@ from hivemind.features.task import TaskNode
 class ATaskNode(TaskNode):
     use_config = 'sampledata/tasks_a.yaml'
 
+class BadTaskNode(TaskNode):
+    use_config = 'sampledata/badtasks.yaml'
+
 def _within_test_hive(func):
     """
     Wrapper function to build a text hive and
@@ -68,15 +71,18 @@ class TestTasks(unittest.TestCase):
             port = hive_controller.settings['default_port']
 
             def fire():
-                res = requests.post(f'http://127.0.0.1:{port}/tasks/execute',
-                                json={
-                                    'node': 'ATaskNode',
-                                    'name': 'test_task_a',
-                                    'parameters' : {}
-                                })
+                requests.post(f'http://127.0.0.1:{port}/tasks/execute',
+                               json={
+                                   'node': 'ATaskNode',
+                                   'name': 'test_task_a',
+                                   'parameters' : {}
+                               })
 
-            for i in range(25):
+            for i in range(1):
                 fire()
+
+            res = requests.get(f'http://127.0.0.1:{port}/tasks')
+            res.raise_for_status()
 
 
     @_within_test_hive
@@ -99,3 +105,17 @@ class TestTasks(unittest.TestCase):
 
         with self.assertRaises(EnvironmentError):
             hive_controller.exec_(1.0)
+
+
+    def test_task_node_validation(self):
+        """
+        Given a set of task nodes, validate them.
+        """
+        settings = {
+            'hive_features' : ['hivemind.features.task']
+        }
+
+        with global_settings.override(settings):
+            bad = BadTaskNode(name='testme')
+            errors, warnings = bad.verify_config(chatty=False)
+            self.assertFalse(bad.valid)

@@ -9,7 +9,7 @@ Out of this stemmed an idea. What if we could handle more than just back and for
 The Task System
 ===============
 
-The task system allows you to set up manually executable operations as well as build cron-like jobs that can execute periodically.
+The task system allows you to set up manually executable operations as well as build cron-like jobs that can execute periodically. All of that information is then shared and organized through the controll layer and presented in a web interface at ``/tasks``.
 
 Enough talk! Let's get coding! For now let's start with a new hive.
 
