@@ -187,10 +187,10 @@ class _DatabaseIntegration(metaclass=PV_SimpleRegistry):
     @classmethod
     def start_database(cls, database_settings):
         database_type = database_settings.get('type')
-        if database_type not in cls._registry:
+        if database_type not in cls._simple_registry:
             raise ValueError(f'The database integration: {database_type} not found.')
 
-        interface = cls._registry[database_type]()
+        interface = cls._simple_registry[database_type]()
         interface.connect(**database_settings)
         return interface
 

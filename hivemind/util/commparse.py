@@ -156,7 +156,7 @@ class CommandParser(object):
         :return: bool
         """
         # TODO: _QuickPythonExpression
-        # return eval(expr, _QuickPythonExpression._registry)
+        # return eval(expr, _QuickPythonExpression._simple_registry)
         return eval(expr)
 
 

@@ -275,10 +275,10 @@ class SimpleRegistry(type):
     tidy alias utility for defined subclasses of any given base.
     """
     def __init__(cls, name, bases, dct) -> None:
-        if not hasattr(cls, '_registry'):
-            cls._registry = {} # Base Class
+        if not hasattr(cls, '_simple_registry'):
+            cls._simple_registry = {} # Base Class
         elif cls.name:
-            cls._registry[cls.name] = cls
+            cls._simple_registry[cls.name] = cls
 
 
 class PV_SimpleRegistry(PureVirtualMeta, SimpleRegistry):

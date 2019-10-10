@@ -186,9 +186,6 @@ class RootController(_HivemindAbstractObject):
         # Requested subscriptions
         self._subscriptions = {}
 
-        # Registered tasks
-        self._tasks = {}
-
         # How we know to shut down our dispatch threads
         self._abort = False
         self._done = False
@@ -233,7 +230,7 @@ class RootController(_HivemindAbstractObject):
         for feature in global_settings['hive_features']:
             importlib.import_module(feature)
 
-        for _, feature_class in _Feature._registry.items():
+        for _, feature_class in _Feature._simple_registry.items():
             self._features.append(feature_class(self))
 
 
@@ -474,7 +471,7 @@ class RootController(_HivemindAbstractObject):
                 # reuse_port=True
             )
 
-        except Exception as e:
+        except Exception as e: # pragma: no cover
             if not isinstance(e, KeyboardInterrupt):
                 import traceback
                 self.log_critical(traceback.format_exc())
@@ -572,7 +569,7 @@ class RootController(_HivemindAbstractObject):
         with self.lock:
             if not node:
 
-                if payload['status'] == self.NODE_TERM:
+                if payload['status'] == self.NODE_TERM: # pragma: no cover
                     # We're removing the node. Shouldn't be
                     # here
                     return 0
@@ -611,9 +608,6 @@ class RootController(_HivemindAbstractObject):
 
             if node_instance in self._services:
                 self._services.pop(node_instance)
-
-            if node_instance in self._tasks:
-                self._tasks.pop(node_instance)
 
             for filter_, subinfo in self._subscriptions.items():
                 to_rem = []
@@ -709,16 +703,6 @@ class RootController(_HivemindAbstractObject):
 
 
 
-    def _recieve_task_data(self, path, payload):
-        """
-        Based on the task information coming in, we store the information for
-        our user to digest via the web server.
-        :param path: The url path that we've entered with
-        :param payload: The payload that we're given
-        """
-        return 0
-
-
     async def _shutdown(self):
         if self._app:
             await self._app.shutdown()
@@ -801,6 +785,13 @@ class RootController(_HivemindAbstractObject):
             result = requests.post(url, json=payload, verify=False)
             result.raise_for_status()
         except Exception as e:
+            #
+            # TESTME:
+            # Ideally we never get here. Hitting this in the tests
+            # will be a specific kind of challenge. One that I would
+            # rather spend elsewhere but it's too much code to pragma
+            # away
+            #
             do_log = False
             with self.lock:
                 if self._done:

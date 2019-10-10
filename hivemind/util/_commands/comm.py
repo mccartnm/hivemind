@@ -111,9 +111,9 @@ class _AbstractCommand(object, metaclass=SimpleRegistry):
         :param name: The name of our command
         :return: subclass of _AbstractCommand
         """
-        if not name.lower() in cls._registry:
+        if not name.lower() in cls._simple_registry:
             raise CommandError(f'HM Command not found: "{name}"')
-        return cls._registry[name.lower()]
+        return cls._simple_registry[name.lower()]
     
 
     # -- Virtual Interface

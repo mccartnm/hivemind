@@ -50,6 +50,17 @@ class TestTasks(unittest.TestCase):
         """
         Test we can handle a basic task execute
         """
+        parser = build_hivemind_parser()
+        additional_args = [
+            'create_node',
+            'FooBarTask',
+            '-c',
+            'hivemind.features.task.TaskNode'
+        ]
+        args = parser.parse_args(additional_args)
+        args.func(args)
+
+
         hive_controller = HiveController(
             os.getcwd(),
             nodes=[ATaskNode],

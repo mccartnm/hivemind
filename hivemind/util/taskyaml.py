@@ -73,11 +73,12 @@ class TaskYaml(object):
 
 
     @classmethod
-    def load(cls, path: str) -> TaskYaml:
+    def load(cls, path: str, chatty: bool=True) -> TaskYaml:
         """
         Load a given yaml task file
 
         :param path: Path to the yaml file with out config
+        :param chatty: Additional debug info
         :return: TaskYaml instance.
         """
         try:
@@ -88,7 +89,8 @@ class TaskYaml(object):
                 data = pdict(d)
 
         except Exception as e:
-            logging.error(f'{path} -> invalid YAML file')
+            if chatty:
+                logging.error(f'{path} -> invalid YAML file')
             raise IOError(str(e))
 
         name = data.get('name', os.path.basename(path))
@@ -213,11 +215,11 @@ class TaskYaml(object):
         for k, v in self['env'].items():
 
             if isinstance(v, dict):
-                v = pdict(v)
+                v = pdict.quick(v)
 
             # We should probably so some verification that this
             # is okay
-            expanded = self.expand(v, env, type(v))
+            expanded = self.expand(v, env, rtype=type(v))
 
             if isinstance(v, (list, tuple)):
                 expanded = os.pathsep.join(expanded)
@@ -322,7 +324,6 @@ class TaskYaml(object):
         :param rytpe: How should we return out item? One of (list, str)
         :return: rtype
         """
-
         if env is None:
             env = self[kProperties]
             env.update(os.environ)
@@ -460,7 +461,7 @@ class TaskYaml(object):
 
         if rtype is str and not isinstance(value, str):
             raise ExpansionError('Invalid rtype for value! '
-                                 f'type = {rtype}, value_type = {type(value)}')
+                                 f'rtype = {rtype}, value_type = {type(value)}')
 
         return value
 

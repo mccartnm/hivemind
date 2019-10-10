@@ -48,7 +48,7 @@ class _VariableExpansionExpression(object, metaclass=PV_SimpleRegistry):
     @classmethod
     def _get_expressions_layout(cls) -> str:
         output = ''
-        for name, cls_ in cls._registry.items():
+        for name, cls_ in cls._simple_registry.items():
             output += ' - ' + name + ': \n'
             output += (' ' * 4) + cls_.__doc__.strip()
             output += '\n'
@@ -69,7 +69,7 @@ class _VariableExpansionExpression(object, metaclass=PV_SimpleRegistry):
         A pure virtual function that must be overloaded to handle
         the expression
         """
-        raise NotImplementedError("Overload run()")
+        raise NotImplementedError("Overload run()") # pragma: no cover
 
 
     @classmethod
@@ -136,6 +136,6 @@ class _VariableExpansionExpression(object, metaclass=PV_SimpleRegistry):
                 if i == last_index and current_arg:
                     args.append(current_arg)
 
-        if not search in cls._registry:
+        if not search in cls._simple_registry:
             raise ExpressionError(f'The expression: "{search}" cannot be found!')
-        return cls._registry[search](task_data).evalute(value, *args)
+        return cls._simple_registry[search](task_data).evalute(value, *args)

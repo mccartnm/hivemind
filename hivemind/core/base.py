@@ -89,7 +89,7 @@ class _HivemindAbstractObject(object):
         The function that all hive objects should overload to execute whatever
         their specific process is.
         """
-        raise NotImplementedError("Must overload run() method")
+        raise NotImplementedError("Must overload run() method") # pragma: no cover
 
 
 class _HandlerBase:

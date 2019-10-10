@@ -30,7 +30,7 @@ class TerminalThread(threading.Thread):
 
     https://www.geeksforgeeks.org/python-different-ways-to-kill-a-thread/
     """
-    def get_id(self) -> int:
+    def get_id(self) -> int: # pragma: no cover
         """
         Obtain the id of this thread to pass to the low level API for
         exception management.
@@ -42,7 +42,7 @@ class TerminalThread(threading.Thread):
             if thread is self:
                 return id
 
-    def raise_exception(self) -> None:
+    def raise_exception(self) -> None: # pragma: no cover
         """
         Call to execute an exception within the thread
         :return: None

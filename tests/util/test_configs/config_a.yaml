@@ -20,6 +20,15 @@ properties:
   multipart: "my test multipart"
   test_multipart: "{multipart...}"
 
+  innermapping:
+    a_test_key:
+      inner_key: myval
+      not_ok: ['cannot use this']
+
+
+  cyclic_a: "{cyclic_b}"
+  cyclic_b: "{cyclic_a}"
+
 requires:
   - git
   - py::requests
@@ -27,6 +36,13 @@ requires:
 
 m__run_simple_echo(output):
   - "echo {output...}"
+
+env:
+  PATH: ["somepath/please"]
+  MY_CUSTOM_VAL: "foo"
+  A_DICT_VAL:
+    windows: "cool_beans"
+    unix: "cool_beans"
 
 tasks:
 
