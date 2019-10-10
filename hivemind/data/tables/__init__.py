@@ -59,7 +59,18 @@ class NodeRegister(_TableLayout):
         return hash(self.name)
 
 
+class NodeMeta(_TableLayout):
+    """
+    Table to assign metadata to nodes. This makes
+
+    """
+    node = _Field.ForeignKeyField(NodeRegister)
+    key = _Field.TextField()
+    value = _Field.TextField(null=True)
+
+
 RequiredTables = [
     [TableDefinition.db_name(), TableDefinition],
-    [NodeRegister.db_name(), NodeRegister]
+    [NodeRegister.db_name(), NodeRegister],
+    [NodeMeta.db_name(), NodeMeta]
 ]

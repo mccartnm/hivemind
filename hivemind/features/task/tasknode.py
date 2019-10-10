@@ -122,6 +122,16 @@ class TaskNode(_Node):
         return super().run(*args, **kwargs)
 
 
+    def metadata(self) -> dict:
+        """
+        We define some metadata to help with querying
+        :return: dict[str:str]
+        """
+        return {
+            'node.type' : 'tasknode'
+        }
+
+
     def on_shutdown(self):
         """
         Deregister any of our tasks!
@@ -266,3 +276,6 @@ class TaskNode(_Node):
             'name': task.name,
             'status': RootController.NODE_TERM
         })
+
+
+_Node.mark_abstract(TaskNode)

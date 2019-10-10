@@ -117,13 +117,13 @@ class SQLiteInterface(_DatabaseIntegration):
         if values is None:
             values = tuple()
 
-        # statements = sqlparse.split(query)
-        # print ('-- sql')
-        # for statement in statements:
-        #     print (sqlparse.format(statement, reindent=True, keyword_case='upper'))
-        # print ("_values:")
-        # __import__('pprint').pprint(values)
-        # print ('-------------------------------------')
+        statements = sqlparse.split(query)
+        print ('-- sql')
+        for statement in statements:
+            print (sqlparse.format(statement, reindent=True, keyword_case='upper'))
+        print ("_values:")
+        __import__('pprint').pprint(values)
+        print ('-------------------------------------')
 
         try:
             return cursor.execute(query, values)

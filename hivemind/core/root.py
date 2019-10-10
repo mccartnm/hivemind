@@ -47,8 +47,9 @@ from hivemind.util.misc import requests_retry_session
 from hivemind.data.abstract.scafold import _DatabaseIntegration
 
 # -- Bsaeic tables required by the system
-from hivemind.data.tables import TableDefinition, RequiredTables, NodeRegister
-
+from hivemind.data.tables import (
+    TableDefinition, RequiredTables, NodeRegister, NodeMeta
+)
 
 # -- Populate known database mappings
 from hivemind.data.contrib import interfaces
@@ -283,6 +284,7 @@ class RootController(_HivemindAbstractObject):
         """
         return cls._register_post('node', {
             'name' : node.name,
+            'meta' : node.metadata(),
             'status': cls.NODE_PENDING
         })
 
@@ -511,10 +513,9 @@ class RootController(_HivemindAbstractObject):
         :param name: The name of the node to search for
         :return: NodeRegister|None
         """
-        with self._database.transaction:
-            return self._database.new_query(
-                NodeRegister, name=name
-            ).get_or_null()
+        return self._database.new_query(
+            NodeRegister, name=name
+        ).get_or_null()
 
 
     def dispatch_one(self, node, endpoint, payload) -> None:
@@ -567,36 +568,47 @@ class RootController(_HivemindAbstractObject):
         node = self.get_node(payload['name'])
 
         with self.lock:
-            if not node:
+            with self.database.transaction:
+                if not node:
 
-                if payload['status'] == self.NODE_TERM: # pragma: no cover
-                    # We're removing the node. Shouldn't be
-                    # here
-                    return 0
+                    if payload['status'] == self.NODE_TERM: # pragma: no cover
+                        # We're removing the node. Shouldn't be
+                        # here
+                        return 0
 
-                self._port_count += 1
-                port = global_settings['default_port'] + self._port_count
-                self._database.create(
-                    NodeRegister,
-                    name=payload['name'],
-                    status=payload['status'],
-                    port=port
-                )
-                return port
+                    self._port_count += 1
+                    port = global_settings['default_port'] + self._port_count
+                    node = self._database.create(
+                        NodeRegister,
+                        name=payload['name'],
+                        status=payload['status'],
+                        port=port
+                    )
 
-            else:
-                destroy = None
+                    # Populate any metadata
+                    for key, value in payload.get('meta', {}).items():
+                        self._database.create(
+                            NodeMeta,
+                            node=node,
+                            key=key,
+                            value=str(value)
+                        )
 
-                # We've seen this node before (at least - we should
-                # have)
-                if payload['status'] == self.NODE_TERM:
-                    # Clean up this node
-                    self._remove_node(node)
-                    return 0
+                    return port
+
                 else:
-                    node.status = payload['status']
-                    self._database.save(node)
-                    return node.port
+                    destroy = None
+
+                    # We've seen this node before (at least - we should
+                    # have)
+                    if payload['status'] == self.NODE_TERM:
+                        # Clean up this node
+                        self._remove_node(node)
+                        return 0
+                    else:
+                        node.status = payload['status']
+                        self._database.save(node)
+                        return node.port
 
 
     def _remove_node(self, node_instance: NodeRegister) -> None:

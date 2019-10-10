@@ -22,6 +22,8 @@ SOFTWARE.
 from __future__ import annotations
 
 import functools
+from dataclasses import dataclass
+from typing import Optional, Callable, Any
 
 from purepy import PureVirtualMeta, pure_virtual, override
 
@@ -35,20 +37,27 @@ class QueryOperators(object):
 
     We'll probably have to keep digging on this.
     """
+    @dataclass
+    class Op:
+        op: str
+        expect_val: bool
+        val_comp: Optional[Callable[..., Any]] = None
+        op_comp: Optional[Callable[..., Any]] = None
+
     basic_operators = {
-        'equals'     : ('= ?', True),
-        'not_equals' : ('<> ?', True),
-        'lt'         : ('< ?', True),
-        'lt_or_eq'   : ('<= ?', True),
-        'gt'         : ('> ?', True),
-        'gt_or_eq'   : ('>= ?', True),
-        'startswith' : ("LIKE ?", True, lambda x: x + "%"),
-        'endswith'   : ("LIKE ?", True, lambda x: "%" + x),
-        'contains'   : ("LIKE ?", True, lambda x: "%" + x + "%"),
-        'one_of'     : ('IN ?', True),
-        'not_one_of' : ('NOT IN ?', True),
-        'is_null'    : ('IS NULL', False),
-        'is_not_null': ('IS NOT NULL', False),
+        'equals'     : Op('= ?', True),
+        'not_equals' : Op('<> ?', True),
+        'lt'         : Op('< ?', True),
+        'lt_or_eq'   : Op('<= ?', True),
+        'gt'         : Op('> ?', True),
+        'gt_or_eq'   : Op('>= ?', True),
+        'startswith' : Op("LIKE ?", True, lambda x: x + "%"),
+        'endswith'   : Op("LIKE ?", True, lambda x: "%" + x),
+        'contains'   : Op("LIKE ?", True, lambda x: "%" + x + "%"),
+        'one_of'     : Op('IN (%s)', True, None, lambda x, y: x % (','.join('?'*len(y)))),
+        'not_one_of' : Op('NOT IN (%s)', True, None, lambda x, y: x % (','.join('?'*len(y)))),
+        'is_null'    : Op('IS NULL', False),
+        'is_not_null': Op('IS NOT NULL', False),
     }
 
 
@@ -148,25 +157,34 @@ class QueryFilter(_QueryItemBase):
         db_col = self._table.db_column_name(self._field.field_name)
         values = tuple()
 
+        opclass = None
         expect_val = True
-        comp = None
 
         op = self._operator # ...
         if self._operator in interface.overloaded_operators:
-            op, expect_val, *comp = interface.overloaded_operators[self._operator]
+            opclass = interface.overloaded_operators[self._operator]
 
         elif self._operator in QueryOperators.basic_operators:
-            op, expect_val, *comp = QueryOperators.basic_operators[self._operator]
+            opclass = QueryOperators.basic_operators[self._operator]
 
         elif hasattr(self._field, self._operator):
-            op, expect_val, *comp = getattr(self._field, self._operator)()
+            opclass = getattr(self._field, self._operator)()
 
-        if expect_val and self._value:
+        op = opclass.op
+
+        if opclass.expect_val and self._value:
             v = self._value
-            if comp:
-                v = comp[0](v)
+            if opclass.val_comp:
+                v = opclass.val_comp(v)
 
-            values = (self._field.prep_for_db(v),)
+            v = self._field.prep_for_db(v)
+            if isinstance(v, list):
+                values = tuple(v)
+            else:
+                values = (v,)
+
+            if opclass.op_comp:
+                op = opclass.op_comp(op, values)
 
         return (
             f'\"{self._table.db_name()}\".\"{db_col}\" {op}',
@@ -266,6 +284,15 @@ class Query(object):
             values,
             fields
         )
+
+
+    def values_list(self, field) -> list:
+        """
+        Get a flat list of a certain fields values
+        :return: list[Any]
+        """
+        values = self.values(field)
+        return [v[field] for v in values]
 
 
     def objects(self) -> list:

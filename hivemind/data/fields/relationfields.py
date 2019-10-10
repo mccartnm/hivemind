@@ -38,7 +38,9 @@ class ForeignKeyField(_Field):
         _Field.__init__(self, *args, **kwargs)
         self._related_class = related_class
 
-        self._del_policy = ForeignKeyField.CASCADE
+        self._del_policy = kwargs.get(
+            'del_policy', ForeignKeyField.CASCADE
+        )
 
         if not self._null and self._del_policy == self.SET_NULL:
             raise TypeError(

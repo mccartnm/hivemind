@@ -72,8 +72,6 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
     Object that can communicate with other nodes via basic protocols
     after registering with the RootController anything it hosts.
     """
-    _abstract = False
-
     def __init__(self, name=None, **kwargs):
         _HivemindAbstractObject.__init__(
             self,
@@ -224,6 +222,25 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
         :return: None
         """
         return
+
+
+    def metadata(self) -> dict:
+        """
+        Optional, use to include additional metadata for this node to
+        aid in querying or otherwise.
+
+        :return: dict[str:str]
+        """
+        return {}
+
+
+    @classmethod
+    def mark_abstract(cls, node_class):
+        """
+        Mark a particular node class as abstract
+        """
+        if node_class in cls._registry:
+            cls._registry.remove(node_class)
 
 
     # -- Public Methods

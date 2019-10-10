@@ -24,7 +24,7 @@ import aiohttp_jinja2
 
 from hivemind import RootController
 from hivemind.core.feature import _Feature
-from hivemind.data.tables import NodeRegister
+from hivemind.data.tables import NodeRegister, NodeMeta
 
 # This is a bit of a weird case because we define
 from .task import _Task
@@ -80,7 +80,7 @@ class TaskFeature(_Feature):
 
     # -- End overrides
 
-    # -- Endpoints
+    # -- Controller Endpoints
 
     async def register_task(self, request):
         """ Register a _Task """
@@ -108,7 +108,9 @@ class TaskFeature(_Feature):
         :param request: aiohttp request
         :return: context for the jijna2 task template
         """
-        return self.controller.base_context()
+        context = self.controller.base_context()
+        context['nodes'] = self._nodes_to_tasks()
+        return context
 
 
     async def execute_task(self, request):
@@ -184,6 +186,35 @@ class TaskFeature(_Feature):
 
 
     # -- Private Methods
+
+    def _nodes_to_tasks(self) -> dict:
+        # We define this metadata through TaskNode.metadata()
+        node_ids = self.database.new_query(
+            NodeMeta,
+            key='node.type',
+            value='tasknode'
+        ).values_list('node')
+
+        nodes = self.database.new_query(
+            NodeRegister
+        ).filter(NodeRegister.id.one_of(node_ids)).objects()
+
+        if not node_ids:
+            return {}
+
+        tasks = self.database.new_query(
+            TaskRegister
+        ).filter(TaskRegister.node.one_of(node_ids)).objects()
+
+        task_map = {}
+        for task in tasks:
+            task_map.setdefault(task.node_pk, []).append(task)
+
+        node_to_tasks = {}
+        for node in nodes:
+            node_to_tasks[node] = task_map.get(node.id, [])
+
+        return node_to_tasks
 
 
     def _node_and_task(self, data) -> (tuple, None):

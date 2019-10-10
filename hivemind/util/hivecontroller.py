@@ -305,7 +305,7 @@ class HiveController(object):
         # so we have to go get it ourselves
         import nodes
         # sys.path.pop(0)
-        return [n for n in _Node._registry if not n._abstract]
+        return [n for n in _Node._registry]
 
 
     def __nodes_from_names(self, names: list) -> list:

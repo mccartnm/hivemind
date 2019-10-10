@@ -108,10 +108,12 @@ class _TableLayout(object, metaclass=_TableMeta):
                 return value
             else:
                 field = self._internal_fields[key]
-                return self._database.new_query(
+                value = self._database.new_query(
                     field.related_class,
                     **{field.related_class.pk(): value}
                 ).get()
+                setattr(self, key, value)
+                return value
 
         return super().__getattribute__(key)
 
@@ -206,12 +208,13 @@ class _TableLayout(object, metaclass=_TableMeta):
         the database
         """
         new_instance = cls(database)
-        idx = 0
 
-        for name in cls._internal_field_order:
+        for i, name in enumerate(cls._internal_field_order):
             field = cls._internal_fields[name]
-            setattr(new_instance, name, values[idx])
-            idx += 1
+            setattr(new_instance, name, values[i])
+
+            if field.base_type == FieldTypes.FK:
+                setattr(new_instance, f'{name}_pk', values[i])
 
         return new_instance
 

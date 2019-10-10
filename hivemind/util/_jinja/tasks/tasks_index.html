@@ -1,5 +1,9 @@
 {% extends "root.html" %}
 
 {% block body_ %}
-    todo... 
+    {% for node in nodes %}
+        <div class='node-containter'>
+            <h1>{{ node.name }}</h1>
+        </div>
+    {% endfor %} 
 {% endblock %}
