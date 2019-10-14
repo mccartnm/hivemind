@@ -29,6 +29,7 @@ class _Feature(object, metaclass=SimpleRegistry):
 
     A _Feature can overload a various set of functions
     """
+    static_files = None
 
     def __init__(self, controller) -> None:
         self._controller = controller

@@ -20,7 +20,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import os
 import queue
+import inspect
 import logging
 import fnmatch
 import requests
@@ -394,12 +396,30 @@ class RootController(_HivemindAbstractObject):
 
             self._app = web.Application(loop=loop)
 
+            #
+            # Visual templates for our features
+            #
+            template_loaders = [
+                jinja2.FileSystemLoader(
+                    global_settings['hive_root'] + '/static/templates'
+                )
+            ]
+            for feature in self._features:
+                if not feature.static_files:
+                    continue
+
+                path = os.path.dirname(
+                    inspect.getfile(feature.__class__).replace('\\','/')
+                )
+
+                template_loaders.append(jinja2.FileSystemLoader(
+                    os.path.join(path, feature.static_files)
+                ))
+
             # Setup the template engine
             aiohttp_jinja2.setup(
                 self._app,
-                loader=jinja2.FileSystemLoader(
-                    global_settings['hive_root'] + '/static/templates'
-                )
+                loader=jinja2.ChoiceLoader(template_loaders)
             )
 
             self._app.add_routes([

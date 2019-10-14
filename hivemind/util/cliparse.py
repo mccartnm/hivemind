@@ -153,6 +153,15 @@ def build_hivemind_parser() -> argparse.ArgumentParser:
     new_node.set_defaults(func=_new_node)
     parser.subparser_map['create_node'] = new_node
 
+
+    # -- Feature initialization
+    feature = _new_subparser('feature', description='Set up a features static files')
+    feature.add_argument('name', help='The name of the feature package')
+    feature.add_argument('-s', '--install-static', action='store_true', help='Install static files into the hive. Useful for augmenting defaults')
+    # feature.set_defaults(func=_manage_feature)
+    parser.subparser_map['feature'] = feature
+
+
     # -- Development Envrionment Utility
     dev_env = _new_subparser('dev', description='Start the hive to develop and test')
     dev_env.add_argument('-n', '--node', action='append', help='Specific nodes to run with this hive')

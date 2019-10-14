@@ -4,3 +4,39 @@
     top: 50%;
     transform: translate(-50%, -50%);
 }
+
+.hive-title {
+    font-size: 16px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.main-workspace {
+    display: flex;
+    align-items: stretch;
+    min-height: calc(100vh - 64px);
+}
+
+.side-bar {
+    padding: 20px;
+    flex: 1;
+    flex-grow: 3;
+}
+
+.card-hub {
+    padding: 20px;
+    color: white;
+    flex: 1;
+    flex-grow: 9;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-evenly;
+    flex-wrap: wrap;
+}
+
+.card-hub > div {
+    margin: 10px;
+    flex-grow: 2;
+    max-width: 400px;
+}

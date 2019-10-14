@@ -23,9 +23,9 @@ HIVE_CONTROLLER_LOCATION = os.path.join(HIVE_ROOT, 'root', '__init__.py')
 
 # -- Node log settings
 # LOG_LOCATION = '/var/log/{_hive_name}'
-LOG_LOCATION = os.path.join(os.path.expanduser('~'), '.local', 'log')
+LOG_LOCATION = os.path.join(os.path.expanduser('~'), '.local', 'log', HIVE_NAME)
 if platform.system() == 'Windows':
-    LOG_LOCATION = 'C:\\temp\\log\\{_hive_name}'
+    LOG_LOCATION = 'C:\\temp\\log\\' + HIVE_NAME
 LOG_MAX_BYTE_SIZE = 5 * 1024 * 1024
 LOG_BACKUP_COUNT = 2
 

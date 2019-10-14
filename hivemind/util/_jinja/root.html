@@ -3,8 +3,13 @@
 <head>
     <title>{{_hive_name}} Hive</title>
     <link rel="stylesheet" type="text/css" href="static/style/hivestyle.css">
+    {# for now... #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 </head>
 <body>
+    {% block nav_ %}{% include "nav.html" %}{% endblock %}
     {% block body_ %}{% endblock %}
 </body>
 </html>

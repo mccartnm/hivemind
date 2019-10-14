@@ -31,7 +31,7 @@ from purepy import override
 from hivemind.data.abstract.field import FieldTypes
 from hivemind.data.abstract.scafold import _DatabaseIntegration
 from hivemind.data.exceptions import DatabaseError, IntegrityError, OperationalError
-
+from hivemind.util import global_settings
 
 class SQLiteInterface(_DatabaseIntegration):
     """
@@ -117,13 +117,14 @@ class SQLiteInterface(_DatabaseIntegration):
         if values is None:
             values = tuple()
 
-        statements = sqlparse.split(query)
-        print ('-- sql')
-        for statement in statements:
-            print (sqlparse.format(statement, reindent=True, keyword_case='upper'))
-        print ("_values:")
-        __import__('pprint').pprint(values)
-        print ('-------------------------------------')
+        if global_settings.get('log_sql', False):
+            statements = sqlparse.split(query)
+            print ('-- sql')
+            for statement in statements:
+                print (sqlparse.format(statement, reindent=True, keyword_case='upper'))
+            print ("_values:")
+            __import__('pprint').pprint(values)
+            print ('-------------------------------------')
 
         try:
             return cursor.execute(query, values)

@@ -477,7 +477,7 @@ class HiveController(object):
         Execute the condition to abort our root
         :return: None
         """
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.01)
 
         async with condition:
             condition.notify_all()
