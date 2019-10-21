@@ -28,9 +28,9 @@ properties:
 init_startup_commands:
   - ':mkdir {_hive_name}'
   - ':cd {_hive_name}'
-  - ':mkdir templates'
   - ':mkdir static/templates'
   - ':mkdir static/style'
+  - ':mkdir static/js'
   - for: "file in {start_files}"
     than:
       - ':write --make-dirs "" {file}'
@@ -44,6 +44,7 @@ init_startup_commands:
   - ':write {rootinit} root/__init__.py'
   - ':copy {hm_util_path}/_jinja/* static/templates'
   - ':copy {hm_util_path}/_style/* static/style'
+  - ':copy {hm_util_path}/_js/* static/js'
   - ':cd --pop'
 
 

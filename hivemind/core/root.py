@@ -45,6 +45,7 @@ from .feature import _Feature
 from .base import _HivemindAbstractObject, _HandlerBase
 from hivemind.util import global_settings
 from hivemind.util.misc import requests_retry_session
+from hivemind.util import _webtoolkit
 
 from hivemind.data.abstract.scafold import _DatabaseIntegration
 
@@ -85,7 +86,6 @@ class RootServiceHandler(_HandlerBase):
         return web.json_response({ 'result' : True })
 
 
-
     async def heartbeat(self, request):
         """ Basic alive test """
         return web.json_response({'result' : True})
@@ -104,8 +104,29 @@ class RootServiceHandler(_HandlerBase):
         return web.json_response({'result': True})
 
 
+    async def api(self, request):
+        """
+        Provided utility endpoint for abstract data gathering,
+        content rendering, etc.
+        """
+        query = request.query
+        path = request.match_info['api_path']
+        return _webtoolkit.api_request(path, self.controller, query)
+
+
     @aiohttp_jinja2.template("hive_index.html")
     async def index(self, request):
+        """
+        The Landing page of the root controller
+        """
+        return self.controller.base_context()
+
+
+    @aiohttp_jinja2.template("node_index.html")
+    async def nodes(self, request):
+        """
+        Simple nodes interface
+        """
         return self.controller.base_context()
 
 
@@ -446,11 +467,16 @@ class RootController(_HivemindAbstractObject):
                 web.get('/',
                          self._handler_class.index),
 
+                web.get('/nodes',
+                        self._handler_class.nodes),
+
                 # -- For development - need a "collectstatic" eq
                 web.static('/static',
                            global_settings['static_dirs'][0],
                            follow_symlinks=True)
             ])
+
+            self._install_utility_endpoints(self._app)
 
             for method, path, endpoint in self.additional_routes():
                 self._app.add_routes([getattr(web, method)(path, endpoint)])
@@ -875,6 +901,16 @@ class RootController(_HivemindAbstractObject):
             for table in feature.tables():
                 if table.db_name() not in active_tables:
                     self._database._create_table(table)
+
+
+    def _install_utility_endpoints(self, app: web.Application) -> None:
+        """
+        Utility endpoints provide a few user-oriented endpoints for use
+        with the web interface.
+        """
+        self._app.add_routes([
+            web.get('/api/{api_path:.*}', self._handler_class.api)
+        ])
 
 
     def _install_feature_enpoints(self, app: web.Application) -> None:

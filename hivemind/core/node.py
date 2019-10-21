@@ -353,3 +353,60 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
             print=self.log_info,
             # reuse_port=True # ??
         )
+
+    # -- Web API utils
+
+    @classmethod
+    def wapi_query_for_nodes(cls, controller, querydict):
+        """
+        :return: ``list[NodeRegister]`` for all nodes matching the filters
+        """
+        # TODO: Actually build the filters...
+
+        from hivemind.data.tables import NodeRegister
+        return controller.database.new_query(NodeRegister).objects()
+
+
+    @classmethod
+    def wapi_lookup_for_basic_info(cls, controller, querydict):
+        """
+        Lookup function to provide context for rendering different elements
+        """
+        nodes = cls.wapi_query_for_nodes(controller, querydict)
+
+        output = []
+        for node in nodes:
+            output.append({
+                'node' : node,
+                'name' : node.name,
+                'infos' : [
+                    { 'status' : 'Online' if node.status == 'online' else 'Offline'}
+                ]
+            })
+
+        return output
+
+
+# -- Web API (probably move?)
+
+from hivemind.util._webtoolkit import API
+
+# -- Basic Card And Chip Rendering
+API.register_to_category('topics', 'node',
+    {
+        'title' : 'Nodes',
+        'description' : 'Dive into active nodes and their current processes',
+        'index_url' : '/nodes',
+        'index_url_title' : 'Go To Nodes'
+    },
+    no_lookup = True
+)
+
+
+# -- Ability to generate node cards
+API.register_to_category('nodes', 'node',
+    {
+        'table' : 'NodeRegister',
+        'function' : _Node.wapi_lookup_for_basic_info
+    }
+)

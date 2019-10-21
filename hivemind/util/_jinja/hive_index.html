@@ -1,17 +1,27 @@
 {% extends "root.html" %}
 
+{% block extra_head %}
+    <script src="static/js/hiveindex.js"></script>
+{% endblock %}
+
+
 {% block body_ %}
     <div class="main-workspace">
         <div class="main-ws-component side-bar grey">
             {# todo... #}
-            {#
             <div class="progress">
                 <div class="indeterminate"></div>
             </div>
-            #}
         </div>
-        <div class="main-ws-component card-hub blue-grey darken-4">
-            {# TODO :: CARDS #}
+        <div class="main-ws-component card-hub blue-grey darken-4", id="main-card-hub">
         </div>
     </div>   
  {% endblock %}
+
+{% block end_script %}
+    <script type="text/javascript">
+        $(document).ready(() => {
+            Hivemind.landing.get_cards("#main-card-hub");
+        });
+    </script>
+{% endblock %}

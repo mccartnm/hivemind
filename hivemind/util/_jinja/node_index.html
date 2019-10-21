@@ -1,0 +1,20 @@
+{% extends "root.html" %}
+
+{% block extra_head %}
+    <script src="static/js/nodeindex.js"></script>
+{% endblock %}
+
+{% block body_ %}
+    <div class="main-workspace blue-grey darken-4">
+        <div class="node-container" id="main-node-listing">
+        </div>
+    </div>
+{% endblock %}
+
+{% block end_script %}
+    <script type="text/javascript">
+        $(document).ready(() => {
+            Hivemind.nodes.get_cards("#main-node-listing");
+        });
+    </script>
+{% endblock %}

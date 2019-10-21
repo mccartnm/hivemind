@@ -232,7 +232,6 @@ def requests_retry_session(
 
 # -- Metaclasses
 
-
 class SimpleRegistry(type):
     """
     A metaclass that builds a registry automatically.
