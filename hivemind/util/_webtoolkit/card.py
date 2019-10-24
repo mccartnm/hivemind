@@ -54,8 +54,16 @@ class NodeCard(_Renderable):
     name = 'nodecards'
 
     template = r"""
-    <div class="node">
-        <div class="node-title">{{ item.name }}</div>
+    <div class="node" _node_id="{{ item.id }}">
+        <div class="node-title"><a href="{{ item.url }}">{{ item.name }}</a></div>
+        <div class="node-detail-section">
+            <div class="node-details">
+                Services: {{ item.service_count }}
+            </div>
+            <div class="node-details">
+                Subscriptions: {{ item.sub_count }}
+            </div>
+        </div>
         {% for info in item.infos %}
             <div class="node-chip {{ info.status|lower }}">
                 {{ info.status }}

@@ -1,0 +1,43 @@
+{% extends "root.html" %}
+
+{% block extra_head %}
+    <script src="/static/js/nodepage.js"></script>
+{% endblock %}
+
+{% block body_ %}
+    <div class="main-workspace blue-grey darken-4">
+        <div class="node-detail" id="main-node-placement">
+            <div class="node-basic-info" id="basic-info">
+                <div class="node-title">{{ node.name }}</div>
+                {% if node.status.lower() == 'online' %}
+                <div class="node-chip online">
+                    Online
+                </div>
+                {% else %}
+                <div class="node-chip offline">
+                    Offline
+                </div>
+                {% endif %}
+            </div>
+            <div class="node-attributes">
+                <div class="node-attribute">
+                    <p class="attribute-text">Registered:</p>
+                    <span class="attribute-sep"></span>
+                    <p class="attribute-text">
+                        {{ node.created_on.strftime('%A %B %d, %Y - %H:%M %Z') }}
+                    </p>
+                </div>
+            </div>
+            <div class="node-log-container grey darken-4" id="node-log">
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block end_script %}
+    <script type="text/javascript">
+        $(document).ready(() => {
+            Hivemind.nodes.start_log("{{ node.name }}", "#node-log");
+        });
+    </script>
+{% endblock %}

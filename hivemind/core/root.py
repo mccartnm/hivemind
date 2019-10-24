@@ -29,6 +29,7 @@ import requests
 import functools
 import threading
 import importlib
+from itertools import islice
 
 
 # -- For Queue Prio
@@ -43,6 +44,7 @@ import aiohttp_jinja2
 from . import log
 from .feature import _Feature
 from .base import _HivemindAbstractObject, _HandlerBase
+from .node_endpoints import RootNodeHandler
 from hivemind.util import global_settings
 from hivemind.util.misc import requests_retry_session
 from hivemind.util import _webtoolkit
@@ -104,6 +106,12 @@ class RootServiceHandler(_HandlerBase):
         return web.json_response({'result': True})
 
 
+    async def favicon(self, request):
+        return web.FileResponse(
+            global_settings['static_dirs'][0] + '/favicon.ico'
+        )
+
+
     async def api(self, request):
         """
         Provided utility endpoint for abstract data gathering,
@@ -118,14 +126,6 @@ class RootServiceHandler(_HandlerBase):
     async def index(self, request):
         """
         The Landing page of the root controller
-        """
-        return self.controller.base_context()
-
-
-    @aiohttp_jinja2.template("node_index.html")
-    async def nodes(self, request):
-        """
-        Simple nodes interface
         """
         return self.controller.base_context()
 
@@ -413,7 +413,9 @@ class RootController(_HivemindAbstractObject):
             self._init_database()
 
             self._handler_class = RootServiceHandler()
+            self._node_handler = RootNodeHandler()
             self._handler_class.controller = self # Reverse pointer
+            self._node_handler.controller = self
 
             self._app = web.Application(loop=loop)
 
@@ -423,8 +425,11 @@ class RootController(_HivemindAbstractObject):
             template_loaders = [
                 jinja2.FileSystemLoader(
                     global_settings['hive_root'] + '/static/templates'
-                )
+                ),
             ]
+            for dir_ in global_settings['template_dirs']:
+                template_loaders.append(jinja2.FileSystemLoader(dir_))
+
             for feature in self._features:
                 if not feature.static_files:
                     continue
@@ -467,15 +472,15 @@ class RootController(_HivemindAbstractObject):
                 web.get('/',
                          self._handler_class.index),
 
-                web.get('/nodes',
-                        self._handler_class.nodes),
-
                 # -- For development - need a "collectstatic" eq
                 web.static('/static',
                            global_settings['static_dirs'][0],
-                           follow_symlinks=True)
+                           follow_symlinks=True),
+                web.get('/favicon.ico',
+                        self._handler_class.favicon)
             ])
 
+            self._node_handler.register_routes(self._app)
             self._install_utility_endpoints(self._app)
 
             for method, path, endpoint in self.additional_routes():
@@ -581,6 +586,92 @@ class RootController(_HivemindAbstractObject):
 
         with self._response_condition:
             self._response_condition.notify()
+
+
+    def service_count(self, node) -> int:
+        """
+        Query for the number of services this node consumes
+
+        :param node: ``NodeRegister``
+        :return: ``int``
+        """
+        # This will eventually make it's way to the database
+        return len(self._services.get(node, {}))
+
+
+    def subscription_count(self, node) -> int:
+        """
+        Query for the number of subscriptions this node consumes
+
+        :param node: ``NodeRegister``
+        :return: ``int``
+        """
+        # This will eventually make it's way to the database
+        count = 0
+        for filter_ in self._subscriptions:
+            for si in self._subscriptions[filter_]:
+                if node == si.node:
+                    count += 1
+        return count
+
+
+    def node_log(self, node, lineno, raw=False) -> list:
+        """
+        Based on the node passed in, get the log that goes with it
+        and return the lines from that lineno.
+
+        .. note::
+
+            This needs a completely different approach. It should be
+            streaming this rather than reading the file every few
+            seconds.
+
+            See: aiohttp.web.WebSocket
+
+        :param node: ``NodeRegister``
+        :param lineno: The line that we want to read from
+        :param raw: Push together as one string in the first
+                    element of the list
+        :return: tuple(new_line_no, list[str,])
+        """
+        log_path = os.path.join(
+            global_settings['log_location'], node.name + '.log'
+        )
+
+        if not os.path.isfile(log_path):
+            return None
+
+        def _seek_to_line(handle, n):
+            for ignored in islice(handle, n - 1):
+                pass # Seek away
+
+        with open(log_path, 'r') as f:
+            if lineno == 0 and raw:
+                # We want the whole file
+                return (0, [f.read()])
+
+            elif lineno < 0:
+                # We want to obtain lines from bottom up
+                total_lines = 0
+                for line in f:
+                    total_lines += 1
+
+                lineno = max(0, total_lines + lineno)
+                f.seek(0)
+
+            if lineno > 0:
+                _seek_to_line(f, lineno)
+
+            output = []
+            if raw:
+                output[0] = ''
+                for line in f:
+                    output[0] += line + '\n'
+            else:
+                for line in f:
+                    output.append(line)
+
+            return (lineno + len(output), output)
 
 
     # -- Private Interface (reserved for running instance)
@@ -804,7 +895,7 @@ class RootController(_HivemindAbstractObject):
                         #
                         for si in self._subscriptions[filter_]:
 
-                            node = self.get_node(si.node.name)
+                            node = self.get_node(si.node.name) # cache?
                             if node and node.status != self.NODE_ONLINE:
                                 continue
 

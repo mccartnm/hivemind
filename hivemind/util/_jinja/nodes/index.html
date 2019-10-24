@@ -1,7 +1,7 @@
 {% extends "root.html" %}
 
 {% block extra_head %}
-    <script src="static/js/nodeindex.js"></script>
+    <script src="/static/js/nodeindex.js"></script>
 {% endblock %}
 
 {% block body_ %}
@@ -14,7 +14,7 @@
 {% block end_script %}
     <script type="text/javascript">
         $(document).ready(() => {
-            Hivemind.nodes.get_cards("#main-node-listing");
+            Hivemind.render_into('/nodecards/nodes/node', "#main-node-listing");
         });
     </script>
 {% endblock %}

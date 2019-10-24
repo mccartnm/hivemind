@@ -377,11 +377,15 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
         output = []
         for node in nodes:
             output.append({
+                'id' : node.id,
                 'node' : node,
                 'name' : node.name,
                 'infos' : [
                     { 'status' : 'Online' if node.status == 'online' else 'Offline'}
-                ]
+                ],
+                'service_count' : controller.service_count(node),
+                'sub_count' : controller.subscription_count(node),
+                'url' : f'/nodes/{node.name}'
             })
 
         return output

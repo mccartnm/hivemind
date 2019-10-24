@@ -211,6 +211,13 @@ class _TableLayout(object, metaclass=_TableMeta):
 
         for i, name in enumerate(cls._internal_field_order):
             field = cls._internal_fields[name]
+
+            if isinstance(field, _Field.IdField) and field.pk:
+                # Make a created_on field
+                setattr(new_instance,
+                        'created_on',
+                        _Field.IdField.to_datetime(values[i]))
+
             setattr(new_instance, name, values[i])
 
             if field.base_type == FieldTypes.FK:

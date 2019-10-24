@@ -98,3 +98,11 @@ class IdField(_Field):
         current_id |= next(BASIC_TICK) % 1024
 
         return current_id
+
+
+    @staticmethod
+    def to_datetime(timestamp):
+        """
+        :return: datetimte.datetime
+        """
+        return HIVEMIND_EPOCH + timedelta(microseconds=(timestamp >> 23) * 1000)

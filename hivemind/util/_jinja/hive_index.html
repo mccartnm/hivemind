@@ -1,7 +1,7 @@
 {% extends "root.html" %}
 
 {% block extra_head %}
-    <script src="static/js/hiveindex.js"></script>
+    <script src="/static/js/hiveindex.js"></script>
 {% endblock %}
 
 
@@ -21,7 +21,7 @@
 {% block end_script %}
     <script type="text/javascript">
         $(document).ready(() => {
-            Hivemind.landing.get_cards("#main-card-hub");
+            Hivemind.render_into('/cards/topics', "#main-card-hub");
         });
     </script>
 {% endblock %}

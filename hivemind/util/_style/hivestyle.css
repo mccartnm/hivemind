@@ -1,6 +1,7 @@
 :root {
     --deep-background: #37474f;
     --node-text: #CFCFCF;
+    --node-attr-text: #B4B4B4;
     --online: #00c853;
     --offline: #616161;
 }
@@ -57,7 +58,7 @@
 .node {
     color: white;
     margin: 10px;
-    padding: 10px;
+    padding: 20px;
     border-radius: 5px;
     background-color: var(--deep-background);
     display: flex;
@@ -68,9 +69,12 @@
 .node-title {
     font-size: 20px;
     color: var(--node-text);
-    margin-left: 20px;
     flex: 1;
     flex-grow: 8;
+}
+
+.node-title > a {
+    color: var(--node-text);
 }
 
 .node-info-section {
@@ -106,4 +110,44 @@
     color: white;
     text-shadow: 0px 1px #000000;
     background-color: var(--offline);
+}
+
+.node-detail-section {
+    flex-grow: 5;
+}
+
+
+/* Node Page Style */
+
+.node-detail {
+    width: 100%;
+    margin: 20px;
+}
+
+.node-basic-info {
+    display: flex;
+}
+
+.node-attributes {
+    padding: 10px;
+}
+
+.node-attribute {
+    display: flex;
+}
+
+.attribute-text {
+    color: var(--node-attr-text);
+}
+
+.attribute-sep {
+    width: 5px;
+}
+
+.node-log-container {
+    color: white;
+    max-height: 500px;
+    overflow-y: scroll;
+    font-family: monospace;
+    padding: 10px;
 }

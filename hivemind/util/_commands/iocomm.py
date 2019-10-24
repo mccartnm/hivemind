@@ -409,6 +409,12 @@ class WriteComm(_AbstractCommand):
         )
 
         parser.add_argument(
+            '-f', '--force',
+            action='store_true',
+            help='Overwrite existing files (when mode is not "append")'
+        )
+
+        parser.add_argument(
             'content',
             help='The data to be pushed into the file'
         )
@@ -425,6 +431,12 @@ class WriteComm(_AbstractCommand):
             open_type = 'w'
 
         file = os.path.abspath(self.data.file)
+
+        if not self.data.force and os.path.exists(file):
+            raise CommandError(
+                f'Cannot write file: {self.data.file} '
+                'because it already exists!'
+            )
 
         logging.debug(f'Write to file: {self.data.file}')
 

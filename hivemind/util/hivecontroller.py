@@ -364,13 +364,18 @@ class HiveController(object):
         lvl = logging.DEBUG if self._verbose else logging.WARNING
         for node_class in self._node_classes:
 
+            # FIXME: NEed consistent numbering here
+            name = node_class.__name__
+            if hasattr(node_class, 'default_log_name'):
+                name = node_class.default_log_name
+
             loop = asyncio.new_event_loop()
             abort_condition = asyncio.Condition(loop=loop)
             abort_event = threading.Event()
 
             node_instance = node_class(
-                node_class.__name__,
-                logger=self.node_logger(node_class.__name__, lvl),
+                name,
+                logger=self.node_logger(name, lvl),
                 abort_condition=abort_condition,
                 abort_event=abort_event
             )

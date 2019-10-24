@@ -127,6 +127,9 @@ class _Service(_HivemindAbstractObject):
                     break # Service is terminating
 
             result = func(self) # Fire!
+            if result is None:
+                result = 0
+
             if result > 0:
                 self.abort() # What happens here
                 break
