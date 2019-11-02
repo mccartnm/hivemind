@@ -378,6 +378,7 @@ class _Node(_HivemindAbstractObject, metaclass=BasicRegistry):
         for node in nodes:
             output.append({
                 'id' : node.id,
+                'ip' : node.ip if hasattr(node, 'ip') else '0.0.0.0',
                 'node' : node,
                 'name' : node.name,
                 'infos' : [

@@ -50,6 +50,7 @@ class NodeRegister(_TableLayout):
     """
     name = _Field.TextField(unique=True)
     status = _Field.TextField()
+    ip = _Field.TextField(default='127.0.0.1')
     port = _Field.IntField()
 
     def __eq__(self, other):

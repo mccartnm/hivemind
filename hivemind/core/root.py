@@ -46,7 +46,7 @@ from .feature import _Feature
 from .base import _HivemindAbstractObject, _HandlerBase
 from .node_endpoints import RootNodeHandler
 from hivemind.util import global_settings
-from hivemind.util.misc import requests_retry_session
+from hivemind.util.misc import requests_retry_session, get_ip
 from hivemind.util import _webtoolkit
 
 from hivemind.data.abstract.scafold import _DatabaseIntegration
@@ -272,9 +272,10 @@ class RootController(_HivemindAbstractObject):
             'priority' : 1 # TODO
         }
 
+        root_ip = global_settings.get('hive_root_ip', '127.0.0.1')
         default_port = global_settings['default_port']
         result = requests.post(
-            f'http://127.0.0.1:{default_port}/service/{service.name}',
+            f'http://{root_ip}:{default_port}/service/{service.name}',
             json=json_data,
             verify=False
         )
@@ -287,10 +288,11 @@ class RootController(_HivemindAbstractObject):
         """
         Utility for running a POST at the controller service
         """
+        root_ip = global_settings.get('hive_root_ip', '127.0.0.1')
         default_port = global_settings['default_port']
 
         result = requests_retry_session().post(
-            f'http://127.0.0.1:{default_port}/register/{type_}',
+            f'http://{root_ip}:{default_port}/register/{type_}',
             json=json_data,
             verify=False
         )
@@ -308,7 +310,8 @@ class RootController(_HivemindAbstractObject):
         return cls._register_post('node', {
             'name' : node.name,
             'meta' : node.metadata(),
-            'status': cls.NODE_PENDING
+            'status': cls.NODE_PENDING,
+            'ip' : get_ip()
         })
 
 
@@ -715,15 +718,21 @@ class RootController(_HivemindAbstractObject):
 
                     self._port_count += 1
                     port = global_settings['default_port'] + self._port_count
+
+                    kwargs = {}
+                    if payload['ip'] and payload['ip'] != get_ip():
+                        kwargs['ip'] = payload['ip']
+
                     node = self._database.create(
                         NodeRegister,
                         name=payload['name'],
                         status=payload['status'],
-                        port=port
+                        port=port,
+                        **kwargs
                     )
 
                     # Populate any metadata
-                    for key, value in payload.get('meta', {}).items():
+                    for key, value in payload.get(',meta', {}).items():
                         self._database.create(
                             NodeMeta,
                             node=node,
@@ -899,7 +908,7 @@ class RootController(_HivemindAbstractObject):
                             if node and node.status != self.NODE_ONLINE:
                                 continue
 
-                            url = f'http://127.0.0.1:{si.port}{si.endpoint}'
+                            url = f'http://{si.node.ip}:{si.port}{si.endpoint}'
                             self._ship(
                                 url, dispatch_object.payload, subinfo=(filter_, si)
                             )
@@ -921,7 +930,7 @@ class RootController(_HivemindAbstractObject):
                 node = single_dispatch.node
                 path = single_dispatch.endpoint
                 self._ship(
-                    f'http://127.0.0.1:{node.port}{path}',
+                    f'http://{node.ip}:{node.port}{path}',
                     single_dispatch.payload
                 )
 

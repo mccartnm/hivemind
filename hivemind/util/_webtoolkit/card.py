@@ -56,12 +56,15 @@ class NodeCard(_Renderable):
     template = r"""
     <div class="node" _node_id="{{ item.id }}">
         <div class="node-title"><a href="{{ item.url }}">{{ item.name }}</a></div>
-        <div class="node-detail-section">
+        <div class="node-detail-section monospace">
             <div class="node-details">
                 Services: {{ item.service_count }}
             </div>
             <div class="node-details">
                 Subscriptions: {{ item.sub_count }}
+            </div>
+            <div class="node-details">
+                Location: {{ item.ip }}:{{ item.node.port }}
             </div>
         </div>
         {% for info in item.infos %}

@@ -24,6 +24,7 @@ import re
 import sys
 import shlex
 import shutil
+import socket
 import tempfile
 import subprocess
 from contextlib import contextmanager
@@ -67,6 +68,23 @@ def run_process(command_with_args: (str, list),
             full_command[i] = c[1:-1]
 
     return subprocess.run(full_command).returncode
+
+
+def get_ip() -> str:
+    """
+    :return: String IP (IPv4 currently) that this machine sits on
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        u = os.environ.get('HIVE_ROOT_IP', '10.255.255.255')
+        s.connect((u, 1))
+        ip = s.getsockname()[0]
+    except:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
 
 
 def merge_dicts(dict1: dict, dict2: dict, combine_keys=None, ignore=None):
