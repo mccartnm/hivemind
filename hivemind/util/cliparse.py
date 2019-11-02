@@ -110,6 +110,10 @@ def _dev_env(args: argparse.Namespace) -> int:
         print ('Not a valid hive! Cannot find hive.py')
         return 1
 
+    augment_settings = {}
+    if args.root_ip:
+        augment_settings['hive_root_ip'] = args.root_ip
+
     hive_controller = HiveController(
         os.getcwd(),
         nodes=args.node,

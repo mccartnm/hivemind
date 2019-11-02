@@ -361,25 +361,37 @@ class TaskYaml(object):
                     variable = variable[:-3]
 
                 if ':' in variable:
-                    #
-                    # This is for the dictionary lookup. The coolest part is
-                    # we can ask for properties within properties here! 
-                    #
-                    keys = variable.split(':')
 
-                    if not keys[0] in env:
-                        raise ExpansionError(f"Unknown variable root: {keys[0]}")
+                    if variable.startswith(':raw:'):
+                        #
+                        # A minor raw python command
+                        #
+                        pre_expression = str(eval(variable[len(':raw:'):])) # Not safe...
 
-                    end_value = env[keys[0]]
-                    for k in keys[1:]:
-                        if not isinstance(end_value, (dict, pdict)):
+                    else:
+
+                        #
+                        # This is for the dictionary lookup. The coolest part is
+                        # we can ask for properties within properties here! 
+                        #
+                        keys = variable.split(':')
+
+                        if not keys[0] in env:
+                            if keys[0]:
+                                raise ExpansionError(f"Unknown variable root: {keys[0]}")
+                            else:
+                                raise ExpansionError(f"Invalid variable root: {variable}")
+
+                        end_value = env[keys[0]]
+                        for k in keys[1:]:
+                            if not isinstance(end_value, (dict, pdict)):
+                                raise ExpansionError(f'Bad dictionary variable expansion for: {value}')
+                            end_value = end_value[k]
+
+                        if not isinstance(end_value, str):
                             raise ExpansionError(f'Bad dictionary variable expansion for: {value}')
-                        end_value = end_value[k]
 
-                    if not isinstance(end_value, str):
-                        raise ExpansionError(f'Bad dictionary variable expansion for: {value}')
-
-                    pre_expression = end_value
+                        pre_expression = end_value
 
                 elif hasattr(self, variable):
                     # Things like platform!

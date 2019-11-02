@@ -27,8 +27,8 @@ import itertools
 from datetime import datetime, timezone, timedelta
 
 from hivemind.data.abstract.field import _Field, FieldTypes
+from hivemind.util import global_settings
 
-HIVEMIND_EPOCH = datetime(2019, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 BASIC_TICK = itertools.count()
 SHARD_ID = 1
 
@@ -77,7 +77,7 @@ class IdField(_Field):
         :param datetime: Timezone aware datetime that we're converting to an int
         :return: int
         """
-        diff = datetime - HIVEMIND_EPOCH
+        diff = datetime - global_settings['hive_epoch']
         delta = (diff.days * 86400000) + (diff.seconds * 1000) + (diff.microseconds / 1000)
         return int(delta)
 
@@ -105,4 +105,4 @@ class IdField(_Field):
         """
         :return: datetimte.datetime
         """
-        return HIVEMIND_EPOCH + timedelta(microseconds=(timestamp >> 23) * 1000)
+        return global_settings['hive_epoch'] + timedelta(microseconds=(timestamp >> 23) * 1000)

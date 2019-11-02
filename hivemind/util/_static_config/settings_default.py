@@ -2,6 +2,7 @@
 import os
 import sys
 import platform
+from datetime import datetime, timezone
 
 from hivemind.util import global_settings
 
@@ -52,15 +53,12 @@ DATABASE = { # Probably multiple in the future
     "location" : HIVE_ROOT # ??
 }
 
-# TODO
-# HIVEMIND_EPOCH = datetime({: raw :__import__('datetime').datetime.now().year }, 1, 1, 0, 0, 0, 0, tzinfo=timezone.urc)
+HIVEMIND_EPOCH = datetime({:raw:__import__('datetime').datetime.now().year}, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
 HIVE_DEFAULT_PORT = 9467
 
 # -- Enabled Features
-HIVE_FEATURES = [
-    # 'hivemind.features.task' #< Callable task and cron library
-]
+HIVE_FEATURES = []
 
 # ---------------------------------------------------------------
 
@@ -88,7 +86,7 @@ global_settings.set({
 
     # -- Data Layer
     'database' : DATABASE,
-    # 'hive_epoch' : HIVEMIND_EPOCH,
+    'hive_epoch' : HIVEMIND_EPOCH,
 
     # -- Additional Features
     'hive_features' : HIVE_FEATURES
