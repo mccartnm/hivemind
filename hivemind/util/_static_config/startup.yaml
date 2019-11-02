@@ -38,10 +38,10 @@ init_startup_commands:
   # Write some initial content to these files
   - ':read {hm_util_path}/_static_config/settings_default.py dsettings'
   - ':read {hm_util_path}/_static_config/default_root.py rootinit'
-  - ':write {hive_header} config/hive.py'
+  - ':write -a {hive_header} config/hive.py'
   - ':write -a {dsettings} config/hive.py'
-  - ':write {nodes_init} nodes/__init__.py'
-  - ':write {rootinit} root/__init__.py'
+  - ':write -a {nodes_init} nodes/__init__.py'
+  - ':write -a {rootinit} root/__init__.py'
   - ':copy {hm_util_path}/_jinja/* static/templates'
   - ':copy {hm_util_path}/_style/* static/style'
   - ':copy {hm_util_path}/_js/* static/js'

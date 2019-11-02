@@ -32,7 +32,7 @@ class API(object):
     for the interface.
 
     This will not be a full featured REST framework - just
-    make it as simple as possible to cover omst of the
+    make it as simple as possible to cover most of the
     cases.
     """
 

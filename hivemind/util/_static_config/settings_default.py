@@ -52,7 +52,8 @@ DATABASE = { # Probably multiple in the future
     "location" : HIVE_ROOT # ??
 }
 
-# HIVEMIND_EPOCH = datetime({:raw:__import__('datetime').datetime.now().year}, 1, 1, 0, 0, 0, 0, tzinfo=timezone.urc)
+# TODO
+# HIVEMIND_EPOCH = datetime({: raw :__import__('datetime').datetime.now().year }, 1, 1, 0, 0, 0, 0, tzinfo=timezone.urc)
 
 HIVE_DEFAULT_PORT = 9467
 

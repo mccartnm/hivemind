@@ -432,7 +432,10 @@ class WriteComm(_AbstractCommand):
 
         file = os.path.abspath(self.data.file)
 
-        if not self.data.force and os.path.exists(file):
+        if open_type == 'w' \
+            and not self.data.force \
+            and os.path.exists(file):
+
             raise CommandError(
                 f'Cannot write file: {self.data.file} '
                 'because it already exists!'
